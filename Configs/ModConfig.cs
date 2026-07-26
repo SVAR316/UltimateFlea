@@ -16,9 +16,13 @@ public record ModConfig
     [JsonPropertyName("enableEconomy")]
     public bool EnableEconomy { get; set; } = true;
 
-    /// <summary>local = handbook/prices.json. tarkovdev — на потом.</summary>
+    /// <summary>local = handbook/prices, tarkovdev = json.tarkov.dev avg24h.</summary>
     [JsonPropertyName("priceSource")]
-    public string PriceSource { get; set; } = "local";
+    public string PriceSource { get; set; } = "tarkovdev";
+
+    /// <summary>Для tarkovdev: pve вместо regular.</summary>
+    [JsonPropertyName("pvePrices")]
+    public bool PvePrices { get; set; } = false;
 
     /// <summary>Иначе SPT после нас перезапишет prices из handbook.</summary>
     [JsonPropertyName("preserveBasePrices")]
@@ -26,9 +30,9 @@ public record ModConfig
 
     /// <summary>Иначе цены ниже трейдера просто поднимаются.</summary>
     [JsonPropertyName("disableTraderPriceFloor")]
-    public bool DisableTraderPriceFloor { get; set; } = true;
+    public bool DisableTraderPriceFloor { get; set; } = false;
 
-    /// <summary>Убирает рандом 0.8–1.2 на офферах. Влияет на весь flea.</summary>
+    /// <summary>Убирает рандом 0.8-1.2 на офферах. Влияет на весь flea.</summary>
     [JsonPropertyName("exactOfferPrices")]
     public bool ExactOfferPrices { get; set; } = false;
 

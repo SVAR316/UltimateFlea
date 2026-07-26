@@ -7,7 +7,7 @@ using UltimateFlea.Pricing;
 
 namespace UltimateFlea.Entry;
 
-// Раньше handbook regen — выключаем перезапись цен.
+// Раньше handbook regen: выключаем перезапись цен.
 [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
 public class UltimateFleaEarlyLoad(
     ISptLogger<UltimateFleaEarlyLoad> logger,

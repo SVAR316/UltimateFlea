@@ -2,7 +2,7 @@ using SPTarkov.Server.Core.Models.Common;
 
 namespace UltimateFlea.Pricing;
 
-// База до симуляции. Пока local, потом можно прикрутить Tarkov.dev.
+// База до симуляции: local или tarkovdev.
 public interface IPriceSource
 {
     string Id { get; }

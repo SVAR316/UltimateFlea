@@ -5,7 +5,7 @@ using SPTarkov.Server.Core.Servers;
 
 namespace UltimateFlea.Economy;
 
-// Пишем в Templates.Prices и ItemPriceOverrideRouble — новые офферы подхватят.
+// Пишем в Templates.Prices и ItemPriceOverrideRouble, новые офферы подхватят.
 [Injectable(InjectionType.Singleton)]
 public class PriceApplier(
     DatabaseServer databaseServer,

@@ -45,7 +45,7 @@ public class WipeStage(
         return multiplier;
     }
 
-    // Берём самый старый PMC — если профилей несколько, экономика не скачет.
+    // Берём самый старый PMC. Если профилей несколько, экономика не скачет.
     private long? GetOldestRegistrationDate()
     {
         long? oldest = null;

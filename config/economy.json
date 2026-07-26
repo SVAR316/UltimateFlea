@@ -1,16 +1,16 @@
 {
-  "simIntervalMinutes": 30,
-  "demandPerBuy": 0.05,
-  "supplyPerSell": 0.05,
-  "priceElasticity": 0.5,
-  "decayPerTick": 0.1,
-  "settleSpeed": 0.15,
-  "noise": 0.03,
-  "minPriceFactor": 0.5,
-  "maxPriceFactor": 4.0,
+  "simIntervalMinutes": 60,
+  "demandPerBuy": 0.04,
+  "supplyPerSell": 0.04,
+  "priceElasticity": 0.35,
+  "decayPerTick": 0.08,
+  "settleSpeed": 0.1,
+  "noise": 0.05,
+  "minPriceFactor": 0.6,
+  "maxPriceFactor": 2.5,
   "wipe": {
     "enabled": true,
-    "startLengthDays": 10.0,
-    "startMultiplier": 3.0
+    "startLengthDays": 14.0,
+    "startMultiplier": 2.5
   }
 }

@@ -8,7 +8,7 @@ using SPTarkov.Server.Core.Services;
 
 namespace UltimateFlea.Pool;
 
-// WTT кладёт кастом в ItemConfig.Blacklist + кэш — без чистки офферов не будет.
+// WTT кладёт кастом в ItemConfig.Blacklist + кэш. Без чистки офферов не будет.
 [Injectable(InjectionType.Singleton)]
 public class ItemBlacklistCleaner(
     ISptLogger<ItemBlacklistCleaner> logger,

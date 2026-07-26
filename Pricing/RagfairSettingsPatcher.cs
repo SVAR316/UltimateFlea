@@ -5,7 +5,7 @@ using SPTarkov.Server.Core.Servers;
 
 namespace UltimateFlea.Pricing;
 
-// Выключаем handbook regen, пол торговца и разброс 0.8–1.2 — иначе наши цены не держатся.
+// Выключаем handbook regen, пол торговца и разброс 0.8-1.2, иначе наши цены не держатся.
 [Injectable(InjectionType.Singleton)]
 public class RagfairSettingsPatcher(
     ISptLogger<RagfairSettingsPatcher> logger,

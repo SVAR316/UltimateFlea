@@ -5,31 +5,31 @@ namespace UltimateFlea.Configs;
 public record EconomyConfig
 {
     [JsonPropertyName("simIntervalMinutes")]
-    public double SimIntervalMinutes { get; set; } = 30;
+    public double SimIntervalMinutes { get; set; } = 60;
 
     [JsonPropertyName("demandPerBuy")]
-    public double DemandPerBuy { get; set; } = 0.05;
+    public double DemandPerBuy { get; set; } = 0.04;
 
     [JsonPropertyName("supplyPerSell")]
-    public double SupplyPerSell { get; set; } = 0.05;
+    public double SupplyPerSell { get; set; } = 0.04;
 
     [JsonPropertyName("priceElasticity")]
-    public double PriceElasticity { get; set; } = 0.5;
+    public double PriceElasticity { get; set; } = 0.35;
 
     [JsonPropertyName("decayPerTick")]
-    public double DecayPerTick { get; set; } = 0.1;
+    public double DecayPerTick { get; set; } = 0.08;
 
     [JsonPropertyName("settleSpeed")]
-    public double SettleSpeed { get; set; } = 0.15;
+    public double SettleSpeed { get; set; } = 0.1;
 
     [JsonPropertyName("noise")]
-    public double Noise { get; set; } = 0.03;
+    public double Noise { get; set; } = 0.05;
 
     [JsonPropertyName("minPriceFactor")]
-    public double MinPriceFactor { get; set; } = 0.5;
+    public double MinPriceFactor { get; set; } = 0.6;
 
     [JsonPropertyName("maxPriceFactor")]
-    public double MaxPriceFactor { get; set; } = 4.0;
+    public double MaxPriceFactor { get; set; } = 2.5;
 
     [JsonPropertyName("wipe")]
     public WipeConfig Wipe { get; set; } = new();
@@ -42,9 +42,9 @@ public record WipeConfig
     public bool Enabled { get; set; } = true;
 
     [JsonPropertyName("startLengthDays")]
-    public double StartLengthDays { get; set; } = 10.0;
+    public double StartLengthDays { get; set; } = 14.0;
 
     /// <summary>Множитель в день 0, к концу фазы уходит в 1.0.</summary>
     [JsonPropertyName("startMultiplier")]
-    public double StartMultiplier { get; set; } = 3.0;
+    public double StartMultiplier { get; set; } = 2.5;
 }

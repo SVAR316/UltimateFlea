@@ -10,7 +10,7 @@ namespace UltimateFlea.Economy;
 public class EconomyEngine(
     ISptLogger<EconomyEngine> logger,
     ConfigManager configManager,
-    LocalPriceSource priceSource,
+    PriceSourceRouter priceSource,
     EconomyStateStore stateStore,
     WipeStage wipeStage,
     PriceApplier priceApplier,

@@ -3,9 +3,10 @@
   "enablePoolManager": true,
   "enablePricing": true,
   "enableEconomy": true,
-  "priceSource": "local",
+  "priceSource": "tarkovdev",
+  "pvePrices": false,
   "preserveBasePrices": true,
-  "disableTraderPriceFloor": true,
-  "exactOfferPrices": true,
-  "debug": true
+  "disableTraderPriceFloor": false,
+  "exactOfferPrices": false,
+  "debug": false
 }
