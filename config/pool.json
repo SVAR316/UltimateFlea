@@ -1,0 +1,13 @@
+{
+  "mode": "blacklist",
+  "add": [
+    "5c0d5e4486f77478390952fe",
+    "689479cb47e5acd1e10be986",
+    "68947a4be4bf255d1b0ca746",
+    "689479a4a733b1602007e2eb",
+    "689479eb30cc5ba7be00f5ff"
+  ],
+  "remove": [],
+  "addCategories": [],
+  "removeCategories": []
+}

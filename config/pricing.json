@@ -1,0 +1,12 @@
+{
+  "globalMultiplier": 1.0,
+  "fixedPrices": {
+    "5c0d5e4486f77478390952fe": 1,
+    "689479cb47e5acd1e10be986": 1,
+    "68947a4be4bf255d1b0ca746": 1,
+    "689479a4a733b1602007e2eb": 1,
+    "689479eb30cc5ba7be00f5ff": 1
+  },
+  "itemMultipliers": {},
+  "categoryMultipliers": {}
+}

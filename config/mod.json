@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "enablePoolManager": true,
+  "enablePricing": true,
+  "enableEconomy": true,
+  "priceSource": "local",
+  "preserveBasePrices": true,
+  "disableTraderPriceFloor": true,
+  "exactOfferPrices": true,
+  "debug": true
+}
