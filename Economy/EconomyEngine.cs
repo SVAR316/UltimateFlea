@@ -1,7 +1,7 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Servers;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using UltimateFlea.Pricing;
 
 namespace UltimateFlea.Economy;
@@ -13,8 +13,10 @@ public class EconomyEngine(
     PriceSourceRouter priceSource,
     EconomyStateStore stateStore,
     WipeStage wipeStage,
+    MarketEventService marketEvents,
+    PriceTrendService priceTrends,
     PriceApplier priceApplier,
-    DatabaseServer databaseServer)
+    TemplateTable templates)
 {
     private readonly Random _random = new();
 
@@ -26,7 +28,7 @@ public class EconomyEngine(
         priceSource.Refresh();
 
         var pricing = configManager.Pricing;
-        var items = databaseServer.GetTables().Templates.Items;
+        var items = templates.Items;
 
         var fixedPrices = ToMongoIdMap(pricing.FixedPrices);
         var itemMultipliers = ToMongoIdMap(pricing.ItemMultipliers);
@@ -111,6 +113,7 @@ public class EconomyEngine(
     {
         var cfg = configManager.Economy;
         var wipeMult = wipeStage.GetMultiplier();
+        var items = templates.Items;
 
         foreach (var (tpl, market) in _state)
         {
@@ -122,9 +125,13 @@ public class EconomyEngine(
             market.Demand *= 1.0 - cfg.DecayPerTick;
             market.Supply *= 1.0 - cfg.DecayPerTick;
 
+            var parent = items.TryGetValue(tpl, out var item) ? item.Parent : default;
+            var eventMult = marketEvents.GetMultiplier(tpl, parent);
+            var trendMult = priceTrends.GetMultiplier(parent);
+
             var pressure = cfg.PriceElasticity * (market.Demand - market.Supply);
             var noise = (_random.NextDouble() * 2.0 - 1.0) * cfg.Noise;
-            var target = market.BasePrice * wipeMult * (1.0 + pressure + noise);
+            var target = market.BasePrice * wipeMult * eventMult * trendMult * (1.0 + pressure + noise);
 
             market.CurrentPrice += (target - market.CurrentPrice) * cfg.SettleSpeed;
 

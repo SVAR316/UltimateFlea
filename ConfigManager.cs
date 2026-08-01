@@ -1,7 +1,7 @@
 using System.Reflection;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
-using SPTarkov.Server.Core.Helpers;
-using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Helpers.Server;
 using UltimateFlea.Configs;
 
 namespace UltimateFlea;
@@ -15,6 +15,8 @@ public class ConfigManager(
     public PoolConfig Pool { get; private set; } = new();
     public PricingConfig Pricing { get; private set; } = new();
     public EconomyConfig Economy { get; private set; } = new();
+    public EventsConfig Events { get; private set; } = new();
+    public TrendsConfig Trends { get; private set; } = new();
 
     public string ModPath { get; private set; } = string.Empty;
 
@@ -26,6 +28,8 @@ public class ConfigManager(
         Pool = LoadOrDefault<PoolConfig>("config/pool.json");
         Pricing = LoadOrDefault<PricingConfig>("config/pricing.json");
         Economy = LoadOrDefault<EconomyConfig>("config/economy.json");
+        Events = LoadOrDefault<EventsConfig>("config/events.json");
+        Trends = LoadOrDefault<TrendsConfig>("config/trends.json");
 
         Validate();
     }
@@ -67,6 +71,25 @@ public class ConfigManager(
         {
             logger.Warning($"[UltimateFlea] Unknown pool mode '{Pool.Mode}', defaulting to 'blacklist'");
             Pool.Mode = "blacklist";
+        }
+
+        foreach (var ev in Events.Events)
+        {
+            if (ev.EndDay < ev.StartDay)
+            {
+                logger.Warning($"[UltimateFlea] Event '{ev.Id}' has endDay < startDay, swapping");
+                (ev.StartDay, ev.EndDay) = (ev.EndDay, ev.StartDay);
+            }
+
+            ev.StartDay = Math.Max(0, ev.StartDay);
+            ev.EndDay = Math.Max(ev.StartDay, ev.EndDay);
+            ev.Multiplier = Math.Max(0.01, ev.Multiplier);
+        }
+
+        foreach (var trend in Trends.Trends)
+        {
+            trend.PeriodDays = Math.Max(0.1, trend.PeriodDays);
+            trend.Amplitude = Math.Clamp(trend.Amplitude, 0.0, 0.5);
         }
     }
 

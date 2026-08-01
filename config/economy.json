@@ -1,16 +1,16 @@
 {
   "simIntervalMinutes": 60,
-  "demandPerBuy": 0.04,
-  "supplyPerSell": 0.04,
-  "priceElasticity": 0.35,
+  "demandPerBuy": 0.03,
+  "supplyPerSell": 0.03,
+  "priceElasticity": 0.3,
   "decayPerTick": 0.08,
   "settleSpeed": 0.1,
-  "noise": 0.05,
-  "minPriceFactor": 0.6,
-  "maxPriceFactor": 2.5,
+  "noise": 0.03,
+  "minPriceFactor": 0.7,
+  "maxPriceFactor": 2.0,
   "wipe": {
     "enabled": true,
     "startLengthDays": 14.0,
-    "startMultiplier": 2.5
+    "startMultiplier": 1.8
   }
 }

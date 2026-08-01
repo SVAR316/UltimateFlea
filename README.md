@@ -1,11 +1,11 @@
 # UltimateFlea
 
-Flea market mod for SPT 4.0. It lets you manage the item pool, set prices, and simulate supply, demand, and early-wipe pricing.
+Flea market mod for SPT 4.1. It lets you manage the item pool, set prices, and simulate supply, demand, early-wipe pricing, market events, and category trends.
 
 ## Requirements
 
-- SPT ~4.0
-- .NET 9 SDK if you want to build it yourself
+- SPT ~4.1
+- .NET 10 SDK if you want to build it yourself
 
 ## Build
 
@@ -120,12 +120,78 @@ On every tick, supply and demand decay, a target price is calculated, and the cu
 | `settleSpeed` | How far the current price moves toward its target per tick. `0.15` is gradual; `1.0` is immediate |
 | `noise` | Random variation around the target. `0` disables it; `0.03` adds light variation |
 | `minPriceFactor` | Minimum price relative to the base price. `0.5` means half the base price |
-| `maxPriceFactor` | Maximum price relative to the base price |
-| `wipe.enabled` | Enables the early-wipe price multiplier |
+| `maxPriceFactor` | Maximum price relative to the base price. Default `3.0` so early-wipe + event bumps are not clipped too hard |
+| `wipe.enabled` | Early-wipe price multiplier. Default `false` when using `tarkovdev`, because live averages already include wipe stage. Turn on with `priceSource: local` if you want a simulated early wipe |
 | `wipe.startLengthDays` | Number of days the early-wipe phase lasts |
 | `wipe.startMultiplier` | Multiplier on day zero. It decreases linearly to `1.0` by the end of the phase |
 
-Wipe age is calculated from the character's `RegistrationDate`, not the mod installation date. If multiple profiles exist, the oldest PMC is used.
+Wipe age is calculated from the character's `RegistrationDate`, not the mod installation date. If multiple profiles exist, the oldest PMC is used. Do not stack wipe/events/trends on top of `tarkovdev` unless you want prices above live.
+
+### `events.json`
+
+Timed price multipliers keyed to wipe age (same `RegistrationDate` clock as early wipe). Off by default for the realistic `tarkovdev` preset. Several matching active events multiply together.
+
+| Field | Description |
+| --- | --- |
+| `enabled` | Turns the whole events system on or off |
+| `events[].id` | Label for logs |
+| `events[].startDay` | Wipe age in days when the event starts (inclusive) |
+| `events[].endDay` | Wipe age in days when the event ends (exclusive) |
+| `events[].multiplier` | Price multiplier while the event is active |
+| `events[].categories` | Parent category IDs the event applies to |
+| `events[].items` | Specific item TPLs the event applies to |
+
+Example: ammo costs more during wipe days 7-14.
+
+```json
+{
+  "enabled": true,
+  "events": [
+    {
+      "id": "ammo_week",
+      "startDay": 7,
+      "endDay": 14,
+      "multiplier": 1.4,
+      "categories": ["5485a8684bdc2da2598b456a"],
+      "items": []
+    }
+  ]
+}
+```
+
+### `trends.json`
+
+Slow sine-wave drifts on parent categories over wipe age. Off by default for the realistic `tarkovdev` preset. Formula: `1 + amplitude * sin(2π * ageDays / periodDays + phase)`.
+
+| Field | Description |
+| --- | --- |
+| `enabled` | Turns the whole trends system on or off |
+| `trends[].category` | Parent category ID |
+| `trends[].periodDays` | Length of one full wave in days |
+| `trends[].amplitude` | Peak deviation from 1.0. `0.15` is about +/-15%. Clamped to 0..0.5 |
+| `trends[].phase` | Phase offset in radians |
+
+Example:
+
+```json
+{
+  "enabled": true,
+  "trends": [
+    {
+      "category": "543be5cb4bdc2deb348b4568",
+      "periodDays": 21,
+      "amplitude": 0.15,
+      "phase": 0
+    }
+  ]
+}
+```
+
+Target price each tick is roughly:
+
+`base * wipe * events * trends * (1 + supply/demand pressure + noise)`
+
+Then the current price settles toward that target and is clamped by `minPriceFactor` / `maxPriceFactor`. Fixed prices skip this entirely.
 
 ## Trades and Tarkov.dev
 
@@ -135,4 +201,3 @@ Set `priceSource` to `"tarkovdev"` to use `avg24hPrice` from [json.tarkov.dev](h
 ## Upcoming updates
 
 - Support for locking flea market sales behind character level requirements, like in live Tarkov.
-- Separate market events and more complex price trends as their own systems, not just the current supply/demand tick.

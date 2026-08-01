@@ -1,9 +1,8 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Config;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Servers;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 
 namespace UltimateFlea.Pool;
 
@@ -12,16 +11,15 @@ namespace UltimateFlea.Pool;
 public class PoolManager(
     ISptLogger<PoolManager> logger,
     ConfigManager configManager,
-    DatabaseServer databaseServer,
-    ConfigServer configServer,
+    TemplateTable templates,
+    RagfairConfig ragfairConfig,
+    ItemConfig itemConfig,
     ItemBlacklistCleaner itemBlacklistCleaner)
 {
     public void Apply()
     {
         var poolConfig = configManager.Pool;
-        var items = databaseServer.GetTables().Templates.Items;
-        var ragfairConfig = configServer.GetConfig<RagfairConfig>();
-        var itemConfig = configServer.GetConfig<ItemConfig>();
+        var items = templates.Items;
 
         var addTpls = ToMongoIdSet(poolConfig.Add);
         var removeTpls = ToMongoIdSet(poolConfig.Remove);

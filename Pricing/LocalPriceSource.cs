@@ -1,14 +1,14 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Servers;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 
 namespace UltimateFlea.Pricing;
 
 [Injectable(InjectionType.Singleton)]
 public class LocalPriceSource(
     ISptLogger<LocalPriceSource> logger,
-    DatabaseServer databaseServer) : IPriceSource
+    TemplateTable templates) : IPriceSource
 {
     public string Id => "local";
 
@@ -18,8 +18,7 @@ public class LocalPriceSource(
     {
         _handbookPrices.Clear();
 
-        var handbook = databaseServer.GetTables().Templates.Handbook;
-        foreach (var item in handbook.Items)
+        foreach (var item in templates.Handbook.Items)
         {
             if (item.Price is > 0)
             {
@@ -32,8 +31,7 @@ public class LocalPriceSource(
 
     public double? GetBasePrice(MongoId tpl)
     {
-        var prices = databaseServer.GetTables().Templates.Prices;
-        if (prices.TryGetValue(tpl, out var fleaPrice) && fleaPrice > 0)
+        if (templates.Prices.TryGetValue(tpl, out var fleaPrice) && fleaPrice > 0)
         {
             return fleaPrice;
         }

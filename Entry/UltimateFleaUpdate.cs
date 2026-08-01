@@ -1,11 +1,11 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Models.Utils;
 using UltimateFlea.Economy;
 
 namespace UltimateFlea.Entry;
 
-// Тик экономики по wall-clock, не по апдейт-каденсу сервера.
+// Economy tick on wall-clock, not server update cadence.
 [Injectable(TypePriority = OnUpdateOrder.InsuranceCallbacks)]
 public class UltimateFleaUpdate(
     ISptLogger<UltimateFleaUpdate> logger,
@@ -14,7 +14,7 @@ public class UltimateFleaUpdate(
 {
     private DateTime _lastTickUtc = DateTime.MinValue;
 
-    public Task<bool> OnUpdate(long timeSinceLastRun)
+    public Task<bool> OnUpdateAsync(long secondsSinceLastRun, CancellationToken cancellationToken)
     {
         if (!configManager.Mod.Enabled || !configManager.Mod.EnableEconomy)
         {

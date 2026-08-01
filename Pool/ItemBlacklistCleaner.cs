@@ -1,10 +1,9 @@
 using System.Reflection;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Spt.Config;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Servers;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Items;
 
 namespace UltimateFlea.Pool;
 
@@ -12,7 +11,7 @@ namespace UltimateFlea.Pool;
 [Injectable(InjectionType.Singleton)]
 public class ItemBlacklistCleaner(
     ISptLogger<ItemBlacklistCleaner> logger,
-    ConfigServer configServer,
+    ItemConfig itemConfig,
     ItemFilterService itemFilterService)
 {
     private static readonly FieldInfo? CacheField =
@@ -22,7 +21,6 @@ public class ItemBlacklistCleaner(
 
     public int Unblacklist(IEnumerable<MongoId> tpls)
     {
-        var itemConfig = configServer.GetConfig<ItemConfig>();
         var cache = CacheField?.GetValue(itemFilterService) as HashSet<MongoId>;
 
         var cleared = 0;

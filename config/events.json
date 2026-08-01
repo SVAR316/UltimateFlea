@@ -1,0 +1,42 @@
+{
+  "enabled": true,
+  "events": [
+    {
+      "id": "early_hideout_rush",
+      "startDay": 0,
+      "endDay": 10,
+      "multiplier": 1.15,
+      "categories": [
+        "57864a3d24597754843f8721",
+        "57864a66245977548f04a81b",
+        "57864bb724597708b13994c2",
+        "57864c322459775490116fbf"
+      ],
+      "items": []
+    },
+    {
+      "id": "mid_ammo_pressure",
+      "startDay": 8,
+      "endDay": 24,
+      "multiplier": 1.12,
+      "categories": [
+        "5485a8684bdc2da2598b456a",
+        "543be5cb4bdc2deb348b4568"
+      ],
+      "items": []
+    },
+    {
+      "id": "late_barter_soft",
+      "startDay": 28,
+      "endDay": 90,
+      "multiplier": 0.9,
+      "categories": [
+        "57864a3d24597754843f8721",
+        "57864a66245977548f04a81b",
+        "57864bb724597708b13994c2",
+        "57864c322459775490116fbf"
+      ],
+      "items": []
+    }
+  ]
+}

@@ -1,20 +1,20 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Models.Utils;
 using UltimateFlea.Economy;
 using UltimateFlea.Pool;
 using UltimateFlea.Pricing;
 
 namespace UltimateFlea.Entry;
 
-// Раньше handbook regen: выключаем перезапись цен.
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
+// Early: turn off handbook regen before flea prices settle.
+[Injectable(TypePriority = OnLoadOrder.HandbookCallbacks - 1)]
 public class UltimateFleaEarlyLoad(
     ISptLogger<UltimateFleaEarlyLoad> logger,
     ConfigManager configManager,
     RagfairSettingsPatcher ragfairSettingsPatcher) : IOnLoad
 {
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         configManager.Load();
 
@@ -33,7 +33,7 @@ public class UltimateFleaEarlyLoad(
     }
 }
 
-// После WTT и т.п., но до генерации офферов.
+// After WTT etc., but before offer generation.
 [Injectable(TypePriority = OnLoadOrder.RagfairCallbacks - 1)]
 public class UltimateFleaLoad(
     ISptLogger<UltimateFleaLoad> logger,
@@ -41,7 +41,7 @@ public class UltimateFleaLoad(
     PoolManager poolManager,
     EconomyEngine economyEngine) : IOnLoad
 {
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(configManager.ModPath))
         {

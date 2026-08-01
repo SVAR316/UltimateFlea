@@ -8,13 +8,13 @@ public record EconomyConfig
     public double SimIntervalMinutes { get; set; } = 60;
 
     [JsonPropertyName("demandPerBuy")]
-    public double DemandPerBuy { get; set; } = 0.04;
+    public double DemandPerBuy { get; set; } = 0.03;
 
     [JsonPropertyName("supplyPerSell")]
-    public double SupplyPerSell { get; set; } = 0.04;
+    public double SupplyPerSell { get; set; } = 0.03;
 
     [JsonPropertyName("priceElasticity")]
-    public double PriceElasticity { get; set; } = 0.35;
+    public double PriceElasticity { get; set; } = 0.3;
 
     [JsonPropertyName("decayPerTick")]
     public double DecayPerTick { get; set; } = 0.08;
@@ -23,19 +23,22 @@ public record EconomyConfig
     public double SettleSpeed { get; set; } = 0.1;
 
     [JsonPropertyName("noise")]
-    public double Noise { get; set; } = 0.05;
+    public double Noise { get; set; } = 0.03;
 
     [JsonPropertyName("minPriceFactor")]
-    public double MinPriceFactor { get; set; } = 0.6;
+    public double MinPriceFactor { get; set; } = 0.7;
 
     [JsonPropertyName("maxPriceFactor")]
-    public double MaxPriceFactor { get; set; } = 2.5;
+    public double MaxPriceFactor { get; set; } = 2.0;
 
     [JsonPropertyName("wipe")]
     public WipeConfig Wipe { get; set; } = new();
 }
 
-/// <summary>Ранний вайп от RegistrationDate персонажа.</summary>
+/// <summary>
+/// Early-wipe bump from RegistrationDate.
+/// Useful with local prices. With tarkovdev leave disabled, live averages already include wipe stage.
+/// </summary>
 public record WipeConfig
 {
     [JsonPropertyName("enabled")]
@@ -44,7 +47,7 @@ public record WipeConfig
     [JsonPropertyName("startLengthDays")]
     public double StartLengthDays { get; set; } = 14.0;
 
-    /// <summary>Множитель в день 0, к концу фазы уходит в 1.0.</summary>
+    /// <summary>Day-zero multiplier, falls to 1.0 by end of phase.</summary>
     [JsonPropertyName("startMultiplier")]
-    public double StartMultiplier { get; set; } = 2.5;
+    public double StartMultiplier { get; set; } = 1.8;
 }

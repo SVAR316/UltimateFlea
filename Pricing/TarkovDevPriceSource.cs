@@ -1,7 +1,7 @@
 using System.Text.Json;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Common.Models.Logging;
 
 namespace UltimateFlea.Pricing;
 
@@ -83,16 +83,11 @@ public class TarkovDevPriceSource(
                     continue;
                 }
 
-                if (!item.Value.TryGetProperty("avg24hPrice", out var avg) ||
-                    avg.ValueKind != JsonValueKind.Number)
+                var price = ReadPositivePrice(item.Value, "avg24hPrice")
+                    ?? ReadPositivePrice(item.Value, "lastLowPrice");
+                if (price is > 0)
                 {
-                    continue;
-                }
-
-                var price = avg.GetDouble();
-                if (price > 0)
-                {
-                    _prices[new MongoId(item.Name)] = price;
+                    _prices[new MongoId(item.Name)] = price.Value;
                 }
             }
 
@@ -103,6 +98,17 @@ public class TarkovDevPriceSource(
             logger.Warning($"[UltimateFlea] json.tarkov.dev parse fail: {ex.Message}");
             return false;
         }
+    }
+
+    private static double? ReadPositivePrice(JsonElement item, string propertyName)
+    {
+        if (!item.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.Number)
+        {
+            return null;
+        }
+
+        var price = value.GetDouble();
+        return price > 0 ? price : null;
     }
 
     private string? GetWithRetries(string url, int retries)

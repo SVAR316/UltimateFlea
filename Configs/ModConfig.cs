@@ -18,7 +18,7 @@ public record ModConfig
 
     /// <summary>local = handbook/prices, tarkovdev = json.tarkov.dev avg24h.</summary>
     [JsonPropertyName("priceSource")]
-    public string PriceSource { get; set; } = "tarkovdev";
+    public string PriceSource { get; set; } = "local";
 
     /// <summary>Для tarkovdev: pve вместо regular.</summary>
     [JsonPropertyName("pvePrices")]

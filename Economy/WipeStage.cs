@@ -1,11 +1,10 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
-using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Servers;
-using UltimateFlea.Configs;
 
 namespace UltimateFlea.Economy;
 
-// Множитель раннего вайпа от RegistrationDate, не от установки мода.
+// Early-wipe multiplier from RegistrationDate, not from mod install time.
 [Injectable(InjectionType.Singleton)]
 public class WipeStage(
     ISptLogger<WipeStage> logger,
@@ -20,32 +19,46 @@ public class WipeStage(
             return 1.0;
         }
 
+        var ageDays = GetWipeAgeDays();
+        if (ageDays is null)
+        {
+            return 1.0;
+        }
+
+        var progress = Math.Clamp(ageDays.Value / wipe.StartLengthDays, 0.0, 1.0);
+        var multiplier = wipe.StartMultiplier + (1.0 - wipe.StartMultiplier) * progress;
+
+        if (configManager.Mod.Debug)
+        {
+            logger.Debug($"[UltimateFlea] Wipe stage: ageDays={ageDays.Value:F2}, progress={progress:F2}, mult={multiplier:F3}");
+        }
+
+        return multiplier;
+    }
+
+    /// <summary>
+    /// Days since the oldest PMC RegistrationDate. Null if no profile has one.
+    /// Shared by wipe, market events, and category trends.
+    /// </summary>
+    public double? GetWipeAgeDays()
+    {
         var registrationDate = GetOldestRegistrationDate();
         if (registrationDate is null)
         {
-            return 1.0;
+            return null;
         }
 
         var nowSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var ageSeconds = nowSeconds - registrationDate.Value;
         if (ageSeconds <= 0)
         {
-            return 1.0;
+            return 0.0;
         }
 
-        var ageDays = ageSeconds / 86400.0;
-        var progress = Math.Clamp(ageDays / wipe.StartLengthDays, 0.0, 1.0);
-        var multiplier = wipe.StartMultiplier + (1.0 - wipe.StartMultiplier) * progress;
-
-        if (configManager.Mod.Debug)
-        {
-            logger.Debug($"[UltimateFlea] Wipe stage: ageDays={ageDays:F2}, progress={progress:F2}, mult={multiplier:F3}");
-        }
-
-        return multiplier;
+        return ageSeconds / 86400.0;
     }
 
-    // Берём самый старый PMC. Если профилей несколько, экономика не скачет.
+    // Oldest PMC so the economy does not jump when multiple profiles exist.
     private long? GetOldestRegistrationDate()
     {
         long? oldest = null;

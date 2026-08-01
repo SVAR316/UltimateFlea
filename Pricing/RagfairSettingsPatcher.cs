@@ -1,7 +1,6 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Spt.Config;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Servers;
 
 namespace UltimateFlea.Pricing;
 
@@ -10,12 +9,12 @@ namespace UltimateFlea.Pricing;
 public class RagfairSettingsPatcher(
     ISptLogger<RagfairSettingsPatcher> logger,
     ConfigManager configManager,
-    ConfigServer configServer)
+    RagfairConfig ragfairConfig)
 {
     public void Apply()
     {
         var mod = configManager.Mod;
-        var dynamic = configServer.GetConfig<RagfairConfig>().Dynamic;
+        var dynamic = ragfairConfig.Dynamic;
 
         if (mod.PreserveBasePrices)
         {

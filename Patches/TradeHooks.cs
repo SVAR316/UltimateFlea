@@ -1,26 +1,30 @@
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Controllers;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Ragfair;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.ItemEvent;
 using SPTarkov.Server.Core.Models.Eft.Ragfair;
 using SPTarkov.Server.Core.Models.Eft.Trade;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Servers;
+using SPTarkov.Server.Core.Services.Ragfair;
 using UltimateFlea.Economy;
 
 namespace UltimateFlea.Patches;
 
 // Покупка на flea -> demand. Успешная продажа лота игрока -> supply.
-[Injectable(TypePriority = OnLoadOrder.PreSptModLoader)]
-public class TradeHooksLoad(ISptLogger<TradeHooksLoad> logger) : IOnLoad
+[Injectable(TypePriority = OnLoadOrder.Preload)]
+public class TradeHooksLoad(
+    ISptLogger<TradeHooksLoad> logger,
+    ConfigManager configManager,
+    EconomyEngine economyEngine,
+    RagfairOfferService ragfairOfferService) : IOnLoad
 {
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
+        TradeHookHelper.Initialize(configManager, economyEngine, ragfairOfferService);
         new ConfirmRagfairTradingPatch().Enable();
         new CompleteOfferPatch().Enable();
         logger.Info("[UltimateFlea] Trade hooks enabled.");
@@ -32,24 +36,26 @@ internal static class TradeHookHelper
 {
     private static readonly AsyncLocal<List<MongoId>?> PendingBuys = new();
 
+    private static ConfigManager? _config;
+    private static EconomyEngine? _engine;
+    private static RagfairOfferService? _offers;
+
+    public static void Initialize(
+        ConfigManager configManager,
+        EconomyEngine economyEngine,
+        RagfairOfferService ragfairOfferService)
+    {
+        _config = configManager;
+        _engine = economyEngine;
+        _offers = ragfairOfferService;
+    }
+
     public static void CaptureBuys(ProcessRagfairTradeRequestData? request)
     {
         var tpls = new List<MongoId>();
         PendingBuys.Value = tpls;
 
-        if (request?.Offers is null || request.Offers.Count == 0)
-        {
-            return;
-        }
-
-        var provider = ServiceLocator.ServiceProvider;
-        if (provider is null)
-        {
-            return;
-        }
-
-        var ragfair = provider.GetService<RagfairServer>();
-        if (ragfair is null)
+        if (request?.Offers is null || request.Offers.Count == 0 || _offers is null)
         {
             return;
         }
@@ -61,7 +67,7 @@ internal static class TradeHookHelper
                 continue;
             }
 
-            var offer = ragfair.GetOffer(new MongoId(offerReq.Id));
+            var offer = _offers.GetOfferByOfferId(new MongoId(offerReq.Id));
             var tpl = offer?.Items?.FirstOrDefault()?.Template;
             if (tpl is not null && !tpl.Value.IsEmpty)
             {
@@ -110,20 +116,8 @@ internal static class TradeHookHelper
 
     private static EconomyEngine? TryGetEngine()
     {
-        var provider = ServiceLocator.ServiceProvider;
-        if (provider is null)
-        {
-            return null;
-        }
-
-        var config = provider.GetService<ConfigManager>();
-        if (config is null)
-        {
-            return null;
-        }
-
-        // Late load ещё не вызвал Load() в PreSpt-патчах; к моменту сделок конфиг уже есть.
-        if (string.IsNullOrEmpty(config.ModPath))
+        var config = _config;
+        if (config is null || string.IsNullOrEmpty(config.ModPath))
         {
             return null;
         }
@@ -133,7 +127,7 @@ internal static class TradeHookHelper
             return null;
         }
 
-        return provider.GetService<EconomyEngine>();
+        return _engine;
     }
 }
 
