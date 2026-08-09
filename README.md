@@ -18,9 +18,12 @@ Config files are stored in `config\` next to the DLL. Economy state is saved to 
 
 ## Item IDs
 
-Use https://db.sp-tarkov.com/ to find item IDs. Search by item name or its 24-character ID.  
-Items from other mods may only be listed in their `CustomItems` files or locale files.
+Find item TPLs (24-char IDs) from:
 
+- https://db.sp-tarkov.com/ — search by name or ID
+- Offline list in this repo: [docs/ITEM_IDS.md](https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md) (EN + RU names)
+
+Items from other mods may only be listed in their `CustomItems` files or locale files.  
 Invalid IDs are skipped and logged as warnings.
 
 ## Config
@@ -106,7 +109,7 @@ If another mod such as WTT puts an item in the global item blacklist, adding it 
 | `itemMultipliers` | Price multiplier by item TPL |
 | `categoryMultipliers` | Price multiplier by parent category |
 
-Get item TPLs from https://db.sp-tarkov.com/ (24-char ID, not the item name).  
+Use a 24-char TPL, not the item name — from https://db.sp-tarkov.com/ or [docs/ITEM_IDS.md](https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md).  
 Requires `"enablePricing": true` in `mod.json`. Restart the server after edits.
 
 Example: lock Graphics card to 200000 RUB forever:

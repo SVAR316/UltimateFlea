@@ -5,10 +5,13 @@ Generated: 2026-08-09. Templates with Name/ShortName: **5293** (table rows: 5059
 
 Search: Ctrl+F by EN/RU name or paste a 24-char TPL.
 
+Also: https://db.sp-tarkov.com/  
+This file on GitHub: https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md
+
 On any SPT install (always offline):
 `SPT_Data/Server/database/locales/global/en.json` — keys `{id} Name` / `{id} ShortName`.
 
-Local Item Finder (если сайт умрёт): https://github.com/sp-tarkov/spt-item-finder
+Local Item Finder: https://github.com/sp-tarkov/spt-item-finder
 
 | ID | EN Name | EN Short | RU Name | RU Short |
 |---|---|---|---|---|
