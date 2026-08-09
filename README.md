@@ -102,9 +102,27 @@ If another mod such as WTT puts an item in the global item blacklist, adding it 
 | Field | Description |
 | --- | --- |
 | `globalMultiplier` | Multiplier applied to every price |
-| `fixedPrices` | Fixed RUB prices that are not changed by the economy simulation |
+| `fixedPrices` | Fixed RUB prices by item TPL; economy never changes these |
 | `itemMultipliers` | Price multiplier by item TPL |
 | `categoryMultipliers` | Price multiplier by parent category |
+
+Get item TPLs from https://db.sp-tarkov.com/ (24-char ID, not the item name).  
+Requires `"enablePricing": true` in `mod.json`. Restart the server after edits.
+
+Example: lock Graphics card to 200000 RUB forever:
+
+```json
+{
+  "globalMultiplier": 1.0,
+  "fixedPrices": {
+    "57347ca924597744596b4e71": 200000
+  },
+  "itemMultipliers": {},
+  "categoryMultipliers": {}
+}
+```
+
+For a relative bump instead of a hard price, use `itemMultipliers`, e.g. `"57347ca924597744596b4e71": 1.5`.
 
 ### `economy.json`
 
@@ -120,8 +138,8 @@ On every tick, supply and demand decay, a target price is calculated, and the cu
 | `settleSpeed` | How far the current price moves toward its target per tick. `0.15` is gradual; `1.0` is immediate |
 | `noise` | Random variation around the target. `0` disables it; `0.03` adds light variation |
 | `minPriceFactor` | Minimum price relative to the base price. `0.5` means half the base price |
-| `maxPriceFactor` | Maximum price relative to the base price. Default `3.0` so early-wipe + event bumps are not clipped too hard |
-| `wipe.enabled` | Early-wipe price multiplier. Default `false` when using `tarkovdev`, because live averages already include wipe stage. Turn on with `priceSource: local` if you want a simulated early wipe |
+| `maxPriceFactor` | Maximum price relative to the base price |
+| `wipe.enabled` | Early-wipe price multiplier. Default on with `local`. Turn off if using `tarkovdev` (live averages already include wipe stage) |
 | `wipe.startLengthDays` | Number of days the early-wipe phase lasts |
 | `wipe.startMultiplier` | Multiplier on day zero. It decreases linearly to `1.0` by the end of the phase |
 
@@ -129,7 +147,7 @@ Wipe age is calculated from the character's `RegistrationDate`, not the mod inst
 
 ### `events.json`
 
-Timed price multipliers keyed to wipe age (same `RegistrationDate` clock as early wipe). Off by default for the realistic `tarkovdev` preset. Several matching active events multiply together.
+Timed price multipliers keyed to wipe age (same `RegistrationDate` clock as early wipe). Default local preset ships with light hideout/ammo/late-barter events. Several matching active events multiply together.
 
 | Field | Description |
 | --- | --- |
@@ -161,7 +179,7 @@ Example: ammo costs more during wipe days 7-14.
 
 ### `trends.json`
 
-Slow sine-wave drifts on parent categories over wipe age. Off by default for the realistic `tarkovdev` preset. Formula: `1 + amplitude * sin(2π * ageDays / periodDays + phase)`.
+Slow sine-wave drifts on parent categories over wipe age. Off by default. Formula: `1 + amplitude * sin(2π * ageDays / periodDays + phase)`.
 
 | Field | Description |
 | --- | --- |
@@ -193,11 +211,13 @@ Target price each tick is roughly:
 
 Then the current price settles toward that target and is clamped by `minPriceFactor` / `maxPriceFactor`. Fixed prices skip this entirely.
 
+Trader assort prices are never changed by this mod.
+
 ## Trades and Tarkov.dev
 
 Buying an item from the flea market increases its `demand`. A completed player offer increases its `supply`.  
-Set `priceSource` to `"tarkovdev"` to use `avg24hPrice` from [json.tarkov.dev](https://json.tarkov.dev/endpoints).
+Set `priceSource` to `"tarkovdev"` to use `avg24hPrice` (fallback: `lastLowPrice`) from [json.tarkov.dev](https://json.tarkov.dev/endpoints).
 
-## Upcoming updates
+## Planned
 
-- Support for locking flea market sales behind character level requirements, like in live Tarkov.
+- Level-locked flea sales (like live Tarkov)
