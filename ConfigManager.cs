@@ -17,6 +17,7 @@ public class ConfigManager(
     public EconomyConfig Economy { get; private set; } = new();
     public EventsConfig Events { get; private set; } = new();
     public TrendsConfig Trends { get; private set; } = new();
+    public LevelLocksConfig Levels { get; private set; } = new();
 
     public string ModPath { get; private set; } = string.Empty;
 
@@ -30,6 +31,7 @@ public class ConfigManager(
         Economy = LoadOrDefault<EconomyConfig>("config/economy.json");
         Events = LoadOrDefault<EventsConfig>("config/events.json");
         Trends = LoadOrDefault<TrendsConfig>("config/trends.json");
+        Levels = LoadOrDefault<LevelLocksConfig>("config/levels.json");
 
         Validate();
     }

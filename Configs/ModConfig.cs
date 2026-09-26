@@ -36,6 +36,10 @@ public record ModConfig
     [JsonPropertyName("exactOfferPrices")]
     public bool ExactOfferPrices { get; set; } = false;
 
+    /// <summary>Только лоты игроков: без виртуальных (FakePlayer) и без ассорта торговцев на flea.</summary>
+    [JsonPropertyName("playerOffersOnly")]
+    public bool PlayerOffersOnly { get; set; } = false;
+
     [JsonPropertyName("debug")]
     public bool Debug { get; set; } = false;
 }

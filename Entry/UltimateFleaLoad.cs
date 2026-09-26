@@ -2,6 +2,7 @@ using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using UltimateFlea.Economy;
+using UltimateFlea.LevelLocks;
 using UltimateFlea.Pool;
 using UltimateFlea.Pricing;
 
@@ -12,7 +13,8 @@ namespace UltimateFlea.Entry;
 public class UltimateFleaEarlyLoad(
     ISptLogger<UltimateFleaEarlyLoad> logger,
     ConfigManager configManager,
-    RagfairSettingsPatcher ragfairSettingsPatcher) : IOnLoad
+    RagfairSettingsPatcher ragfairSettingsPatcher,
+    LevelLockService levelLocks) : IOnLoad
 {
     public Task OnLoadAsync(CancellationToken cancellationToken)
     {
@@ -24,10 +26,8 @@ public class UltimateFleaEarlyLoad(
             return Task.CompletedTask;
         }
 
-        if (configManager.Mod.EnableEconomy || configManager.Mod.EnablePricing)
-        {
-            ragfairSettingsPatcher.Apply();
-        }
+        ragfairSettingsPatcher.Apply();
+        levelLocks.RegisterLocales();
 
         return Task.CompletedTask;
     }
@@ -39,7 +39,8 @@ public class UltimateFleaLoad(
     ISptLogger<UltimateFleaLoad> logger,
     ConfigManager configManager,
     PoolManager poolManager,
-    EconomyEngine economyEngine) : IOnLoad
+    EconomyEngine economyEngine,
+    LevelLockService levelLocks) : IOnLoad
 {
     public Task OnLoadAsync(CancellationToken cancellationToken)
     {
@@ -62,6 +63,8 @@ public class UltimateFleaLoad(
         {
             economyEngine.Initialize();
         }
+
+        levelLocks.Apply();
 
         logger.Success("[UltimateFlea] Loaded.");
         return Task.CompletedTask;

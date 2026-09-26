@@ -5,7 +5,7 @@ Generated: 2026-08-09. Templates with Name/ShortName: **5293** (table rows: 5059
 
 Search: Ctrl+F by EN/RU name or paste a 24-char TPL.
 
-Also: https://db.sp-tarkov.com/  
+Also: https://db.sp-tushonka.com/  
 This file on GitHub: https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md
 
 On any SPT install (always offline):

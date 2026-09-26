@@ -8,5 +8,6 @@
   "preserveBasePrices": true,
   "disableTraderPriceFloor": false,
   "exactOfferPrices": false,
+  "playerOffersOnly": false,
   "debug": false
 }

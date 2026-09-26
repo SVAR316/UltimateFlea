@@ -20,7 +20,7 @@ Config files are stored in `config\` next to the DLL. Economy state is saved to 
 
 Find item TPLs (24-char IDs) from:
 
-- https://db.sp-tarkov.com/ — search by name or ID
+- https://db.sp-tushonka.com/ — search by name or ID
 - Offline list in this repo: [docs/ITEM_IDS.md](https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md) (EN + RU names)
 
 Items from other mods may only be listed in their `CustomItems` files or locale files.  
@@ -41,6 +41,7 @@ Invalid IDs are skipped and logged as warnings.
 | `preserveBasePrices` | Stops SPT from rebuilding prices from the handbook |
 | `disableTraderPriceFloor` | Allows flea prices below trader purchase prices |
 | `exactOfferPrices` | Removes the default 0.8-1.2 offer price spread. This affects the entire flea market |
+| `playerOffersOnly` | Only real player listings. Disables virtual (FakePlayer) offers and trader assort listings on the flea |
 | `debug` | Enables additional logging |
 
 ### `pool.json`
@@ -109,7 +110,7 @@ If another mod such as WTT puts an item in the global item blacklist, adding it 
 | `itemMultipliers` | Price multiplier by item TPL |
 | `categoryMultipliers` | Price multiplier by parent category |
 
-Use a 24-char TPL, not the item name — from https://db.sp-tarkov.com/ or [docs/ITEM_IDS.md](https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md).  
+Use a 24-char TPL, not the item name — from https://db.sp-tushonka.com/ or [docs/ITEM_IDS.md](https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md).  
 Requires `"enablePricing": true` in `mod.json`. Restart the server after edits.
 
 Example: lock Graphics card to 200000 RUB forever:
@@ -216,6 +217,53 @@ Then the current price settles toward that target and is clamped by `minPriceFac
 
 Trader assort prices are never changed by this mod.
 
+### `levels.json`
+
+Level-locked flea trading, like live Tarkov. Off by default.
+
+| Field | Description |
+| --- | --- |
+| `enabled` | Turns level locks on or off |
+| `useSptDefaults` | Starts from SPT's live-like levels (`tieredFlea` in SPT's `ragfair.json`), then applies your `items` / `categories` on top |
+| `lockBuying` | Players below the level can't buy these items from other players. Offers show as locked on the flea |
+| `lockSelling` | Players below the level can't list these items |
+| `items` | Item TPL -> required level. `0` removes a default lock |
+| `categories` | Category / base class ID -> required level. Nested categories are included. `0` removes a default lock |
+
+Priority is the same as SPT: ammo tier, then exact item, then the highest matching category. Trader offers are never locked.
+
+Example: armor from level 30, graphics card from level 20, no lock on the default Assault rifle category:
+
+```json
+{
+  "enabled": true,
+  "useSptDefaults": true,
+  "lockBuying": true,
+  "lockSelling": true,
+  "items": {
+    "57347ca924597744596b4e71": 20
+  },
+  "categories": {
+    "5448e54d4bdc2dcc718b4568": 30,
+    "5447b5f14bdc2d61278b4567": 0
+  }
+}
+```
+
+The server enforces the locks on its own. The client plugin (see below) is optional.
+
+## Client plugin
+
+`client/UltimateFlea.Client` is a separate BepInEx plugin, packaged on its own. It loads the level rules from the server (`/ultimateflea/levellocks`).
+
+Build it (needs an installed SPT client):
+
+```
+dotnet build client/UltimateFlea.Client -c Release -p:TarkovDir="C:\SPT"
+```
+
+Output: `client/UltimateFlea.Client/bin/Release/BepInEx/plugins/UltimateFlea/`. Copy the `BepInEx` folder into the SPT game folder.
+
 ## Trades and Tarkov.dev
 
 Buying an item from the flea market increases its `demand`. A completed player offer increases its `supply`.  
@@ -223,4 +271,4 @@ Set `priceSource` to `"tarkovdev"` to use `avg24hPrice` (fallback: `lastLowPrice
 
 ## Planned
 
-- Level-locked flea sales (like live Tarkov)
+- Client UI for level locks (lock icon and level on categories, blocked sell window)

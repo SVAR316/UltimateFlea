@@ -6,14 +6,15 @@ using SPTarkov.Server.Core.Models.Spt.Tables;
 
 namespace UltimateFlea.Pool;
 
-// Пул на flea: CanSellOnRagfair + custom blacklist + ItemConfig.Blacklist (нужно для WTT).
+// Пул только для flea: CanSellOnRagfair + ragfair custom blacklist.
+// ItemConfig.Blacklist не трогаем при remove — иначе пропадает лут PMC/ботов.
+// При add чистим глобальный блеклист (WTT), чтобы кастом появился на барахолке.
 [Injectable(InjectionType.Singleton)]
 public class PoolManager(
     ISptLogger<PoolManager> logger,
     ConfigManager configManager,
     TemplateTable templates,
     RagfairConfig ragfairConfig,
-    ItemConfig itemConfig,
     ItemBlacklistCleaner itemBlacklistCleaner)
 {
     public void Apply()
@@ -56,7 +57,6 @@ public class PoolManager(
             {
                 item.Properties.CanSellOnRagfair = false;
                 ragfairConfig.Dynamic.Blacklist.Custom.Add(tpl);
-                itemConfig.Blacklist.Add(tpl);
                 disabled++;
             }
         }
@@ -117,7 +117,7 @@ public class PoolManager(
 
             if (!MongoId.IsValidMongoId(s))
             {
-                logger.Warning($"[UltimateFlea] Ignoring invalid TPL in pool config: '{s}' (get IDs from db.sp-tarkov.com)");
+                logger.Warning($"[UltimateFlea] Ignoring invalid TPL in pool config: '{s}' (get IDs from db.sp-tushonka.com)");
                 continue;
             }
 

@@ -39,5 +39,22 @@ public class RagfairSettingsPatcher(
             dynamic.PriceRanges.Pack.Max = 1.0;
             logger.Info("[UltimateFlea] Offer price randomisation disabled (exact prices).");
         }
+
+        if (mod.PlayerOffersOnly)
+        {
+            // Safety net; expired regen still forces 1 offer, so Harmony patches do the real work.
+            foreach (var range in dynamic.OfferItemCount.Values)
+            {
+                range.Min = 0;
+                range.Max = 0;
+            }
+
+            foreach (var traderId in ragfairConfig.Traders.Keys.ToList())
+            {
+                ragfairConfig.Traders[traderId] = false;
+            }
+
+            logger.Info("[UltimateFlea] Player offers only: dynamic/trader flea listings disabled.");
+        }
     }
 }
