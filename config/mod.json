@@ -3,11 +3,15 @@
   "enablePoolManager": true,
   "enablePricing": true,
   "enableEconomy": true,
-  "priceSource": "local",
+  "liveFlea": false,
+  "priceSource": "tarkovdev",
+  "tarkovMarketApiKey": "",
+  "priceFetchTimeoutSeconds": 180,
   "pvePrices": false,
   "preserveBasePrices": true,
   "disableTraderPriceFloor": false,
   "exactOfferPrices": false,
   "playerOffersOnly": false,
+  "quickListFromStash": true,
   "debug": false
 }

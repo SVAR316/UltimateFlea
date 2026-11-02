@@ -12,21 +12,24 @@ public class LocalPriceSource(
 {
     public string Id => "local";
 
-    private readonly Dictionary<MongoId, double> _handbookPrices = new();
+    // Swapped in as one reference, like the remote source, so readers never see a half-filled map.
+    private volatile IReadOnlyDictionary<MongoId, double> _handbookPrices = new Dictionary<MongoId, double>();
 
     public void Refresh()
     {
-        _handbookPrices.Clear();
+        var prices = new Dictionary<MongoId, double>();
 
         foreach (var item in templates.Handbook.Items)
         {
             if (item.Price is > 0)
             {
-                _handbookPrices[item.Id] = item.Price.Value;
+                prices[item.Id] = item.Price.Value;
             }
         }
 
-        logger.Debug($"[UltimateFlea] LocalPriceSource cached {_handbookPrices.Count} handbook prices");
+        _handbookPrices = prices;
+
+        logger.Debug($"[UltimateFlea] LocalPriceSource cached {prices.Count} handbook prices");
     }
 
     public double? GetBasePrice(MongoId tpl)

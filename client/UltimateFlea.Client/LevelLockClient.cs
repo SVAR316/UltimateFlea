@@ -31,6 +31,32 @@ namespace UltimateFlea.Client
                 Rules = new LevelLockRules();
                 Plugin.Log.LogWarning($"[UltimateFlea] Could not load level locks from server: {ex.Message}");
             }
+
+            SyncQuickListFlag();
+        }
+
+        private static void SyncQuickListFlag()
+        {
+            try
+            {
+                var json = RequestHandler.GetJson("/ultimateflea/api/config/mod");
+                var mod = JsonConvert.DeserializeObject<ModConfigDto>(json);
+                if (mod != null && Plugin.QuickListFromStash != null)
+                {
+                    Plugin.QuickListFromStash.Value = mod.QuickListFromStash;
+                    Plugin.Log.LogInfo($"[UltimateFlea] Quick list from stash: {mod.QuickListFromStash}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[UltimateFlea] Could not sync quickListFromStash: {ex.Message}");
+            }
+        }
+
+        private sealed class ModConfigDto
+        {
+            [JsonProperty("quickListFromStash")]
+            public bool QuickListFromStash { get; set; } = true;
         }
 
         public static bool IsBuyLocked(string tpl, out int requiredLevel)

@@ -1,17 +1,25 @@
 using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 using UltimateFlea.Client.Patches;
 
 namespace UltimateFlea.Client
 {
-    [BepInPlugin("com.zloymolodoy.ultimateflea.client", "UltimateFlea Client", "1.2.0")]
+    [BepInPlugin("com.zloymolodoy.ultimateflea.client", "UltimateFlea Client", "1.3.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
+        internal static ConfigEntry<bool> QuickListFromStash;
 
         private void Awake()
         {
             Log = Logger;
+
+            QuickListFromStash = Config.Bind(
+                "Selling",
+                "QuickListFromStash",
+                true,
+                "Show UltimateFlea: List in stash context menu and list immediately");
 
             new RagfairUpdateSettingsPatch().Enable();
             new SellLevelLockPatch().Enable();
@@ -20,6 +28,8 @@ namespace UltimateFlea.Client
             new RagfairScreenLockSpritePatch().Enable();
             new CategoryLevelLabelPatch().Enable();
             new CategoryShowPatch().Enable();
+            new StashQuickListPatch().Enable();
+            new StashQuickListButtonPatch().Enable();
         }
     }
 }

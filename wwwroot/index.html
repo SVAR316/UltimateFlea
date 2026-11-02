@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>UltimateFlea — server console</title>
+  <link rel="stylesheet" href="/ultimateflea/app.css" />
+  <script>
+    /* Set the theme before first paint so the page never flashes the wrong one. */
+    (function () {
+      try {
+        var v = localStorage.getItem("ultimateflea.ui.theme");
+        if (v !== "light" && v !== "dark") {
+          v = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        document.documentElement.setAttribute("data-theme", v);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div id="uf-root"></div>
+  <script type="module" src="/ultimateflea/app.js"></script>
+</body>
+</html>
