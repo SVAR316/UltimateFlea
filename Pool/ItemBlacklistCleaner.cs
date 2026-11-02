@@ -19,9 +19,20 @@ public class ItemBlacklistCleaner(
             "ItemBlacklistCache",
             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
+    private static int _missingCacheWarned;
+
     public int Unblacklist(IEnumerable<MongoId> tpls)
     {
         var cache = CacheField?.GetValue(itemFilterService) as HashSet<MongoId>;
+
+        // If SPT renames/retypes the private cache field we only clear item.json and the server keeps
+        // filtering the items out - say so once instead of half-working silently.
+        if (cache is null && Interlocked.Exchange(ref _missingCacheWarned, 1) == 0)
+        {
+            logger.Warning(
+                "[UltimateFlea] ItemFilterService blacklist cache (field 'ItemBlacklistCache', HashSet<MongoId>) not found - " +
+                "SPT may have renamed it. Items added to the flea pool may stay blacklisted; a server update of this mod is needed.");
+        }
 
         var cleared = 0;
         foreach (var tpl in tpls)

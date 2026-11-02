@@ -66,7 +66,7 @@ public class UltimateFleaLoad(
 
         levelLocks.Apply();
 
-        logger.Success("[UltimateFlea] Loaded.");
+        logger.Success("[UltimateFlea] Loaded. Web UI: /ultimateflea/app.html");
         return Task.CompletedTask;
     }
 }

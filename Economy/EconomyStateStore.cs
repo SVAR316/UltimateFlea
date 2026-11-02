@@ -1,6 +1,6 @@
-using System.Text.Json;
-using SPTarkov.DI.Annotations;
 using SPTarkov.Common.Models.Logging;
+using SPTarkov.DI.Annotations;
+using UltimateFlea.Util;
 
 namespace UltimateFlea.Economy;
 
@@ -9,42 +9,32 @@ public class EconomyStateStore(
     ISptLogger<EconomyStateStore> logger,
     ConfigManager configManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-
-    private string DataDir => Path.Combine(configManager.ModPath, "data");
-    private string StatePath => Path.Combine(DataDir, "economy_state.json");
+    private string StatePath => Path.Combine(JsonFileStore.DataDir(configManager.ModPath), "economy_state.json");
 
     public Dictionary<string, ItemMarketState> Load()
     {
-        try
+        // ModPath is empty until ConfigManager.Load() ran; a relative path would hit the server CWD.
+        if (string.IsNullOrEmpty(configManager.ModPath))
         {
-            if (!File.Exists(StatePath))
-            {
-                return new Dictionary<string, ItemMarketState>();
-            }
-
-            var json = File.ReadAllText(StatePath);
-            var data = JsonSerializer.Deserialize<Dictionary<string, ItemMarketState>>(json, JsonOptions);
-            return data ?? new Dictionary<string, ItemMarketState>();
-        }
-        catch (Exception ex)
-        {
-            logger.Warning($"[UltimateFlea] Failed to read economy state, starting fresh. ({ex.Message})");
+            logger.Error("[UltimateFlea] Mod path is not known yet, cannot read economy state.");
             return new Dictionary<string, ItemMarketState>();
         }
+
+        return JsonFileStore.ReadOrDefault<Dictionary<string, ItemMarketState>, EconomyStateStore>(
+            StatePath,
+            JsonFileStore.Data,
+            logger,
+            "economy state") ?? new Dictionary<string, ItemMarketState>();
     }
 
     public void Save(Dictionary<string, ItemMarketState> state)
     {
-        try
+        if (string.IsNullOrEmpty(configManager.ModPath))
         {
-            Directory.CreateDirectory(DataDir);
-            var json = JsonSerializer.Serialize(state, JsonOptions);
-            File.WriteAllText(StatePath, json);
+            logger.Error("[UltimateFlea] Mod path is not known yet, skipping economy state save.");
+            return;
         }
-        catch (Exception ex)
-        {
-            logger.Error($"[UltimateFlea] Failed to save economy state: {ex.Message}");
-        }
+
+        JsonFileStore.WriteAtomic(StatePath, state, JsonFileStore.Data, logger, "economy state", out _);
     }
 }

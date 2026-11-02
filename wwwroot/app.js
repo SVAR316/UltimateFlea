@@ -12,7 +12,7 @@
  *   7. icons
  *   8. svg chart module (registry, scales, tooltip, 8 charts + sparkline)
  *   9. config form editor (type inference -> controls)
- *  10. sections (overview / config / selling / settings / state / presets)
+ *  10. sections (overview / config / selling / settings / state / presets / item picker)
  *  11. shell + router + mount
  * ==========================================================================*/
 
@@ -75,7 +75,7 @@ const I18N = {
       reload: "Reload",
       reloadDisk: "Reload from disk",
       autoRefresh: "Auto-refresh",
-      autoRefreshHint: "/overview is a heavy call — auto-refresh runs every 30s and should not be polled faster.",
+      autoRefreshHint: "/overview is a heavy call, so auto-refresh runs every 30s and should not be polled faster.",
       save: "Save",
       saving: "Saving…",
       discard: "Discard",
@@ -138,7 +138,7 @@ const I18N = {
       removeRow: "Remove row",
       showSecret: "Show value",
       hideSecret: "Hide value",
-      secretNote: "This config holds a secret (an API key or token). The raw JSON below shows it in plain text — take care when sharing your screen or pasting it anywhere.",
+      secretNote: "This config holds a secret (an API key or token). The raw JSON below shows it in plain text, so take care when sharing your screen or pasting it anywhere.",
     },
 
     selling: {
@@ -171,7 +171,7 @@ const I18N = {
 
       factors: "Price factor distribution",
       factorsSub: "Items per factor bucket",
-      factorsCaption: "{above} above base · {at} at base · {below} below base",
+      factorsCaption: "{above} above base, {at} at base, {below} below base",
       factorsEmpty: "No priced items yet.",
       atBase: "at base",
       items: "items",
@@ -201,7 +201,7 @@ const I18N = {
       currentPrice: "Now",
 
       pressure: "Supply / demand pressure",
-      pressureSub: "x = demand − supply, y = price factor",
+      pressureSub: "x = demand - supply, y = price factor",
       pressureCaption: "Each dot is one item. Points right of the zero line are demand-driven and tend to sit above the 1.0 line; points left are oversupplied and drift below it.",
       pressureEmpty: "Not enough simulated items to plot pressure yet.",
 
@@ -212,7 +212,7 @@ const I18N = {
       wipeNoProfile: "No profile found yet, so the wipe day is unknown and today is not marked.",
       wipeToday: "Today",
       wipeCurrent: "Current multiplier",
-      wipeStart: "Start length {days} d · start multiplier ×{mult}",
+      wipeStart: "Start length {days} d, start multiplier ×{mult}",
       multiplier: "Multiplier",
 
       events: "Event timeline",
@@ -221,7 +221,7 @@ const I18N = {
       eventsEmpty: "No events configured.",
       active: "Active",
       inactive: "Inactive",
-      eventDays: "Days {from}–{to}",
+      eventDays: "Days {from}-{to}",
 
       noData: "No data",
       total: "Total",
@@ -268,8 +268,8 @@ const I18N = {
       present: "present",
       missing: "missing",
       levels: "Level locks",
-      levelsDetail: "{items} items · {categories} categories · {rules} rules",
-      poolDetail: "+{add} / −{remove} items · +{addCat} / −{removeCat} categories",
+      levelsDetail: "{items} items, {categories} categories, {rules} rules",
+      poolDetail: "+{add} / -{remove} items, +{addCat} / -{removeCat} categories",
       trends: "Trends",
       trendsDetail: "{total} configured",
       sptDefaults: "SPT defaults",
@@ -298,6 +298,46 @@ const I18N = {
       openConfig: "Open {name}",
     },
 
+    links: {
+      label: "Project links",
+      githubTip: "UltimateFlea on GitHub (opens in a new tab)",
+      spmodTip: "UltimateFlea on sp-mod (opens in a new tab)",
+    },
+
+    idname: {
+      unknown: "Unknown ID",
+      unknownHint: "Not in the item list: the ID is wrong, or the mod that adds it is not installed.",
+    },
+
+    picker: {
+      pick: "Pick",
+      pickTitle: "Choose from the item list instead of typing IDs",
+      titleItem: "Pick items",
+      titleCategory: "Pick categories",
+      search: "Search by name (EN or RU), short name or ID…",
+      source: "Source",
+      allSources: "All sources",
+      vanilla: "Vanilla",
+      category: "Category",
+      allCategories: "All categories",
+      loading: "Loading the item list…",
+      absent: "The item list is not available on this server",
+      absentHint: "This server build has no item catalog yet. You can still type IDs by hand.",
+      loadFailed: "Could not load the item list",
+      noMatches: "Nothing matches.",
+      count: "{n} matches",
+      capped: "Showing the first {shown} of {n}. Narrow the search to see the rest.",
+      selected: "Selected: {n}",
+      insert: "Insert",
+      have: "Already there",
+      keys: "Arrows move, Enter picks, Ctrl+Enter inserts, Esc closes.",
+      unknownSource: "Unknown source",
+      unknownSourceHint: "Not a vanilla item, but which mod added it could not be determined.",
+      iconNote: "Item pictures show only for items you have already seen in game; the rest get a category icon.",
+      added: "Added {n}.",
+      addedSkipped: "Added {n}, already present: {skipped}.",
+    },
+
     help: {
       mod: {
         enabled: "Master switch for the whole mod. When off, the server skips the pool, prices, economy and level locks at startup. Takes effect after a restart.",
@@ -307,11 +347,11 @@ const I18N = {
         liveFlea: "On: base prices come from the online provider in Price source. Off: local handbook prices only, the network is never touched. If the download fails, the mod falls back to the disk cache, then to local prices.",
         priceSource: "Online provider used when Live flea is on: tarkovdev (24h average from json.tarkov.dev, the default) or tarkovmarket (experimental, needs an API key). Ignored when Live flea is off.",
         tarkovMarketApiKey: "API key for tarkov-market. Only used when Live flea is on and Price source is tarkovmarket; with an empty key the mod uses tarkovdev instead. Never logged.",
-        priceFetchTimeoutSeconds: "How long to wait per attempt for the live price download (about 17 MB). Default 180, allowed 10–1800. Raise it on a slow connection. Only matters when Live flea is on.",
+        priceFetchTimeoutSeconds: "How long to wait per attempt for the live price download (about 17 MB). Default 180, allowed 10-1800. Raise it on a slow connection. Only matters when Live flea is on.",
         pvePrices: "Use tarkov.dev PvE prices instead of regular ones. Only matters when Live flea is on with tarkovdev as the source.",
         preserveBasePrices: "Stops SPT from rebuilding flea prices from the handbook over the ones this mod sets. Best left on. Applied at server start.",
         disableTraderPriceFloor: "Lets offers sit below what traders pay; normally SPT raises such prices up to the trader price. Turn on if you want cheap items to be really cheap. Applied at server start.",
-        exactOfferPrices: "Removes the random 0.8–1.2 spread SPT puts on offer prices, so every offer lists at the exact price. Affects the whole flea. Applied at server start.",
+        exactOfferPrices: "Removes the random 0.8-1.2 spread SPT puts on offer prices, so every offer lists at the exact price. Affects the whole flea. Applied at server start.",
         playerOffersOnly: "Only real player listings: no generated (FakePlayer) offers and no trader assortment on the flea. The flea stays empty until players list something. Applied at server start.",
         quickListFromStash: "Client option: adds “UltimateFlea: List” to the stash right-click menu to list an item instantly with a price and tax toast. Needs the client plugin. Off hides the menu entry.",
         debug: "Extra detail in the server log (wipe stage, active events and trends, every economy tick). For troubleshooting only; it makes the log noisy.",
@@ -330,15 +370,15 @@ const I18N = {
         categoryMultipliers: "Category ID (the items' parent class) to a multiplier for every item in it. Stacks with the global and item multipliers. Ignored for fixed-price items.",
       },
       economy: {
-        simIntervalMinutes: "How often the market simulation ticks, in real minutes. Default 60, minimum 1, sane 15–180. Shorter means prices react faster and the state file is rewritten more often.",
-        demandPerBuy: "Demand added to an item for each buy (demand is capped at 1.0). Default 0.03, allowed 0–1, sane 0.01–0.1. Higher means prices climb faster as players buy.",
-        supplyPerSell: "Supply added to an item each time a player's offer sells (capped at 1.0). Default 0.03, allowed 0–1, sane 0.01–0.1. Higher means prices fall faster as players sell.",
-        priceElasticity: "How strongly demand minus supply moves the target price: base × (1 + elasticity × (demand − supply)). Default 0.3, allowed 0–10, sane 0.1–1. At 0 trades never move prices.",
-        decayPerTick: "Share of accumulated demand and supply that fades each tick, so old trades are forgotten. Default 0.08, allowed 0–1, sane 0.03–0.2. At 0 nothing is forgotten.",
-        settleSpeed: "How much of the gap to the target price is closed each tick. Default 0.1, allowed 0–1, sane 0.05–0.3. Low drifts slowly and smoothly; 1 jumps straight to the target.",
-        noise: "Random jitter on the target price each tick, up to ± this value (0.03 is ±3%). Default 0.03, minimum 0, sane 0–0.1. At 0 there is no random wobble.",
-        minPriceFactor: "Price floor as a share of the base price: it never drops below base × this. Default 0.7, minimum 0.01, sane 0.3–1.",
-        maxPriceFactor: "Price ceiling as a share of the base price: it never rises above base × this. Default 2.0, never below the minimum, sane 1.5–3. It also caps early-wipe, event and trend boosts.",
+        simIntervalMinutes: "How often the market simulation ticks, in real minutes. Default 60, minimum 1, sane 15-180. Shorter means prices react faster and the state file is rewritten more often.",
+        demandPerBuy: "Demand added to an item for each buy (demand is capped at 1.0). Default 0.03, allowed 0-1, sane 0.01-0.1. Higher means prices climb faster as players buy.",
+        supplyPerSell: "Supply added to an item each time a player's offer sells (capped at 1.0). Default 0.03, allowed 0-1, sane 0.01-0.1. Higher means prices fall faster as players sell.",
+        priceElasticity: "How strongly demand minus supply moves the target price: base × (1 + elasticity × (demand - supply)). Default 0.3, allowed 0-10, sane 0.1-1. At 0 trades never move prices.",
+        decayPerTick: "Share of accumulated demand and supply that fades each tick, so old trades are forgotten. Default 0.08, allowed 0-1, sane 0.03-0.2. At 0 nothing is forgotten.",
+        settleSpeed: "How much of the gap to the target price is closed each tick. Default 0.1, allowed 0-1, sane 0.05-0.3. Low drifts slowly and smoothly; 1 jumps straight to the target.",
+        noise: "Random jitter on the target price each tick, up to ± this value (0.03 is ±3%). Default 0.03, minimum 0, sane 0-0.1. At 0 there is no random wobble.",
+        minPriceFactor: "Price floor as a share of the base price: it never drops below base × this. Default 0.7, minimum 0.01, sane 0.3-1.",
+        maxPriceFactor: "Price ceiling as a share of the base price: it never rises above base × this. Default 2.0, never below the minimum, sane 1.5-3. It also caps early-wipe, event and trend boosts.",
         wipe: "Early-wipe boost: prices start higher right after a wipe and ease back to normal. Wipe age counts from the oldest PMC profile's registration date.",
         wipe_enabled: "Turns the early-wipe bump on. Most useful with local prices; with tarkovdev leave it off, since live averages already include the wipe stage.",
         wipe_startLengthDays: "How many days the ramp lasts. Default 14. At 0 the bump is disabled.",
@@ -350,7 +390,7 @@ const I18N = {
         events_id: "Name of the event. Only a label for you and the dashboard; it changes nothing.",
         events_startDay: "Wipe day the event starts on, inclusive. Counted from the oldest PMC profile's registration date.",
         events_endDay: "Wipe day the event ends on, exclusive: the event is already off on this day.",
-        events_multiplier: "Price multiplier while the event is active: 1.15 is +15%, 0.9 is −10%. Applied to the target price, which is still clamped by the min and max price factor.",
+        events_multiplier: "Price multiplier while the event is active: 1.15 is +15%, 0.9 is -10%. Applied to the target price, which is still clamped by the min and max price factor.",
         events_categories: "Category IDs (the items' parent class) the event hits.",
         events_items: "Individual item IDs (TPL) the event hits. An event with both lists empty does nothing.",
       },
@@ -412,7 +452,7 @@ const I18N = {
       selling: "Быстрый листинг из контекстного меню схрона.",
       settings: "Язык, тема и обслуживание сервера для этой панели.",
       state: "Живое состояние цен только для чтения, по строке на каждый шаблон предмета.",
-      presets: "Готовые наборы конфигов. Посмотрите превью и примените — конфиги, которых он касается, будут перезаписаны.",
+      presets: "Готовые наборы конфигов. Посмотрите превью и примените: конфиги, которых он касается, будут перезаписаны.",
     },
 
     act: {
@@ -421,7 +461,7 @@ const I18N = {
       reload: "Перезагрузить",
       reloadDisk: "Перечитать с диска",
       autoRefresh: "Автообновление",
-      autoRefreshHint: "/overview — тяжёлый запрос. Автообновление идёт раз в 30 секунд, чаще опрашивать не стоит.",
+      autoRefreshHint: "/overview: тяжёлый запрос. Автообновление идёт раз в 30 секунд, чаще опрашивать не стоит.",
       save: "Сохранить",
       saving: "Сохранение…",
       discard: "Отменить",
@@ -484,7 +524,7 @@ const I18N = {
       removeRow: "Удалить строку",
       showSecret: "Показать значение",
       hideSecret: "Скрыть значение",
-      secretNote: "В этом конфиге есть секрет (ключ API или токен). В сыром JSON ниже он виден открытым текстом — будьте осторожны при демонстрации экрана и не вставляйте его куда попало.",
+      secretNote: "В этом конфиге есть секрет (ключ API или токен). В сыром JSON ниже он виден открытым текстом, так что будьте осторожны при демонстрации экрана и не вставляйте его куда попало.",
     },
 
     selling: {
@@ -517,7 +557,7 @@ const I18N = {
 
       factors: "Распределение ценового фактора",
       factorsSub: "Предметов на корзину фактора",
-      factorsCaption: "{above} выше базы · {at} по базе · {below} ниже базы",
+      factorsCaption: "{above} выше базы, {at} по базе, {below} ниже базы",
       factorsEmpty: "Предметов с ценами пока нет.",
       atBase: "по базе",
       items: "предметов",
@@ -532,7 +572,7 @@ const I18N = {
       supplyLabel: "Предложение",
 
       categories: "Обзор категорий",
-      categoriesSub: "Средний фактор; толщина полосы — число предметов",
+      categoriesSub: "Средний фактор; толщина полосы показывает число предметов",
       categoriesEmpty: "Категорий в экономике пока нет.",
       avgFactor: "Средний фактор",
       avgDemand: "Средний спрос",
@@ -547,8 +587,8 @@ const I18N = {
       currentPrice: "Сейчас",
 
       pressure: "Давление спроса и предложения",
-      pressureSub: "x = спрос − предложение, y = ценовой фактор",
-      pressureCaption: "Каждая точка — один предмет. Точки справа от нулевой линии тянет спрос, и они обычно выше линии 1.0; точки слева перенасыщены предложением и уходят ниже неё.",
+      pressureSub: "x = спрос - предложение, y = ценовой фактор",
+      pressureCaption: "Каждая точка обозначает один предмет. Точки справа от нулевой линии тянет спрос, и они обычно выше линии 1.0; точки слева перенасыщены предложением и уходят ниже неё.",
       pressureEmpty: "Пока недостаточно смоделированных предметов для графика давления.",
 
       wipe: "Кривая раннего вайпа",
@@ -558,7 +598,7 @@ const I18N = {
       wipeNoProfile: "Профиль пока не найден, поэтому день вайпа неизвестен и «сегодня» не отмечено.",
       wipeToday: "Сегодня",
       wipeCurrent: "Текущий множитель",
-      wipeStart: "Длина старта {days} д · множитель старта ×{mult}",
+      wipeStart: "Длина старта {days} д, множитель старта ×{mult}",
       multiplier: "Множитель",
 
       events: "Хронология событий",
@@ -567,7 +607,7 @@ const I18N = {
       eventsEmpty: "События не настроены.",
       active: "Активно",
       inactive: "Неактивно",
-      eventDays: "Дни {from}–{to}",
+      eventDays: "Дни {from}-{to}",
 
       noData: "Нет данных",
       total: "Всего",
@@ -614,8 +654,8 @@ const I18N = {
       present: "есть",
       missing: "отсутствует",
       levels: "Блокировки по уровню",
-      levelsDetail: "{items} предметов · {categories} категорий · {rules} правил",
-      poolDetail: "+{add} / −{remove} предметов · +{addCat} / −{removeCat} категорий",
+      levelsDetail: "{items} предметов, {categories} категорий, {rules} правил",
+      poolDetail: "+{add} / -{remove} предметов, +{addCat} / -{removeCat} категорий",
       trends: "Тренды",
       trendsDetail: "настроено: {total}",
       sptDefaults: "Стандарты SPT",
@@ -644,59 +684,99 @@ const I18N = {
       openConfig: "Открыть: {name}",
     },
 
+    links: {
+      label: "Ссылки проекта",
+      githubTip: "UltimateFlea на GitHub (откроется в новой вкладке)",
+      spmodTip: "UltimateFlea на sp-mod (откроется в новой вкладке)",
+    },
+
+    idname: {
+      unknown: "Неизвестный ID",
+      unknownHint: "Нет в списке предметов: ID неверный или мод, который его добавляет, не установлен.",
+    },
+
+    picker: {
+      pick: "Выбрать",
+      pickTitle: "Выбрать из списка предметов вместо ввода ID руками",
+      titleItem: "Выбор предметов",
+      titleCategory: "Выбор категорий",
+      search: "Поиск по названию (EN или RU), короткому имени или ID…",
+      source: "Источник",
+      allSources: "Все источники",
+      vanilla: "Ванильные",
+      category: "Категория",
+      allCategories: "Все категории",
+      loading: "Загружаю список предметов…",
+      absent: "Список предметов недоступен на этом сервере",
+      absentHint: "В этой сборке сервера ещё нет каталога предметов. ID по-прежнему можно вводить руками.",
+      loadFailed: "Не удалось загрузить список предметов",
+      noMatches: "Ничего не найдено.",
+      count: "Найдено: {n}",
+      capped: "Показаны первые {shown} из {n}. Уточните поиск, чтобы увидеть остальное.",
+      selected: "Выбрано: {n}",
+      insert: "Вставить",
+      have: "Уже есть",
+      keys: "Стрелки двигают, Enter выбирает, Ctrl+Enter вставляет, Esc закрывает.",
+      unknownSource: "Неизвестный источник",
+      unknownSourceHint: "Это не ванильный предмет, но определить, какой мод его добавил, не удалось.",
+      iconNote: "Картинки есть только у предметов, которые вы уже видели в игре; у остальных значок категории.",
+      added: "Добавлено: {n}.",
+      addedSkipped: "Добавлено: {n}, уже были: {skipped}.",
+    },
+
     help: {
       mod: {
-        enabled: "Главный рубильник мода. Выключено — при старте сервера мод не трогает ни пул, ни цены, ни экономику, ни блокировки по уровню. Работает после перезапуска.",
-        enablePoolManager: "Применяет pool.json — какие предметы вообще допускаются на барахолку. Выключено — остаётся стандартный пул SPT.",
+        enabled: "Главный рубильник мода. Если выключено, при старте сервера мод не трогает ни пул, ни цены, ни экономику, ни блокировки по уровню. Работает после перезапуска.",
+        enablePoolManager: "Применяет pool.json: какие предметы вообще допускаются на барахолку. Если выключено, остаётся стандартный пул SPT.",
         enablePricing: "Подставляет цены из pricing.json (множители, фиксированные цены) при старте сервера. Расчёт цен запускается, если включено это или «Экономика», так что при включённой экономике флаг ничего не добавляет; сам по себе даёт статичные цены без симуляции.",
-        enableEconomy: "Запускает симуляцию рынка: покупки толкают цену вверх, продажи — вниз, а возраст вайпа, события и тренды сдвигают её со временем. Выключено — после старта цены стоят на месте, а economy, events и trends ни на что не влияют.",
-        liveFlea: "Вкл — базовые цены тянутся из интернета у провайдера из Price source. Выкл — только локальные цены из хэндбука, в сеть мод не лезет вообще. Если загрузка не удалась, берётся кэш с диска, а потом локальные цены.",
+        enableEconomy: "Запускает симуляцию рынка: покупки толкают цену вверх, продажи вниз, а возраст вайпа, события и тренды сдвигают её со временем. Если выключено, после старта цены стоят на месте, а economy, events и trends ни на что не влияют.",
+        liveFlea: "Если включено, базовые цены тянутся из интернета у провайдера из Price source. Если выключено, используются только локальные цены из хэндбука, в сеть мод не лезет вообще. Если загрузка не удалась, берётся кэш с диска, а потом локальные цены.",
         priceSource: "Откуда брать цены, когда включён Live flea: tarkovdev (средняя за 24 часа с json.tarkov.dev, по умолчанию) или tarkovmarket (экспериментально, нужен ключ API). При выключенном Live flea не используется.",
         tarkovMarketApiKey: "Ключ API tarkov-market. Нужен, только если включён Live flea и выбран tarkovmarket; с пустым ключом мод возьмёт tarkovdev. В лог не пишется.",
-        priceFetchTimeoutSeconds: "Сколько ждать одну попытку скачать живые цены (около 17 МБ). По умолчанию 180, допустимо 10–1800. На медленном интернете поднимите. Важно только при включённом Live flea.",
+        priceFetchTimeoutSeconds: "Сколько ждать одну попытку скачать живые цены (около 17 МБ). По умолчанию 180, допустимо 10-1800. На медленном интернете поднимите. Важно только при включённом Live flea.",
         pvePrices: "Брать с tarkov.dev цены PvE вместо обычных. Имеет смысл только при включённом Live flea и источнике tarkovdev.",
         preserveBasePrices: "Не даёт SPT перезаписать выставленные модом цены заново из хэндбука. Лучше оставить включённым. Применяется при старте сервера.",
         disableTraderPriceFloor: "Разрешает лотам стоить меньше, чем платит торговец; обычно SPT подтягивает такую цену до торговой. Включайте, если хотите, чтобы дешёвое реально было дешёвым. Применяется при старте сервера.",
-        exactOfferPrices: "Убирает случайный разброс цен лотов 0.8–1.2, который SPT добавляет по умолчанию: все лоты встают ровно по цене. Касается всей барахолки. Применяется при старте сервера.",
+        exactOfferPrices: "Убирает случайный разброс цен лотов 0.8-1.2, который SPT добавляет по умолчанию: все лоты встают ровно по цене. Касается всей барахолки. Применяется при старте сервера.",
         playerOffersOnly: "Только лоты реальных игроков: без сгенерированных (FakePlayer) и без ассортимента торговцев. Пока игроки сами ничего не выставят, барахолка пустая. Применяется при старте сервера.",
-        quickListFromStash: "Клиентская опция: ПКМ по предмету в схроне показывает «UltimateFlea: List» — предмет сразу выставляется, а в уведомлении видны цена и налог. Нужен клиентский плагин. Выкл — пункт меню скрыт.",
+        quickListFromStash: "Клиентская опция: ПКМ по предмету в схроне показывает «UltimateFlea: List», предмет сразу выставляется, а в уведомлении видны цена и налог. Нужен клиентский плагин. Если выключено, пункт меню скрыт.",
         debug: "Подробный лог сервера: стадия вайпа, активные события и тренды, каждый тик экономики. Нужен только для отладки, лог сильно разрастается.",
       },
       pool: {
-        mode: "blacklist — остаётся обычный пул SPT, меняется только то, что описано в правилах. whitelist — на барахолке остаётся только разрешённое (add, addCategories), всё остальное убирается.",
+        mode: "blacklist: остаётся обычный пул SPT, меняется только то, что описано в правилах. whitelist: на барахолке остаётся только разрешённое (add, addCategories), всё остальное убирается.",
         add: "ID предметов (TPL), которые принудительно попадают на барахолку. Конкретный предмет важнее правил по категориям, а add важнее remove для того же предмета.",
         remove: "ID предметов (TPL), которые принудительно убираются с барахолки, что бы ни говорили правила по категориям.",
-        addCategories: "ID категорий (родительский класс предметов), чьи предметы попадают на барахолку. В режиме whitelist это список разрешённых категорий; оставите пустым — выживут только предметы из add.",
+        addCategories: "ID категорий (родительский класс предметов), чьи предметы попадают на барахолку. В режиме whitelist это список разрешённых категорий; оставите пустым, и выживут только предметы из add.",
         removeCategories: "ID категорий, чьи предметы убираются с барахолки. Только для blacklist; в whitelist игнорируется.",
       },
       pricing: {
-        globalMultiplier: "Множитель на все плавающие базовые цены. 1.0 — без изменений, 2.0 — всё вдвое дороже. Фиксированных цен не касается. Пересобирается при старте сервера.",
-        fixedPrices: "ID предмета и жёсткая цена. Такие предметы не трогают ни множители, ни симуляция — цена никогда не двигается. Пересобирается при старте сервера.",
+        globalMultiplier: "Множитель на все плавающие базовые цены. 1.0 без изменений, 2.0 всё вдвое дороже. Фиксированных цен не касается. Пересобирается при старте сервера.",
+        fixedPrices: "ID предмета и жёсткая цена. Такие предметы не трогают ни множители, ни симуляция, цена никогда не двигается. Пересобирается при старте сервера.",
         itemMultipliers: "ID предмета и множитель на его базовую цену. Перемножается с общим и категорийным. Для предметов с фиксированной ценой игнорируется.",
         categoryMultipliers: "ID категории (родительский класс предметов) и множитель для всех предметов в ней. Перемножается с общим и предметным. Для предметов с фиксированной ценой игнорируется.",
       },
       economy: {
-        simIntervalMinutes: "Как часто тикает симуляция рынка, в реальных минутах. По умолчанию 60, минимум 1, разумно 15–180. Чем меньше, тем быстрее цены реагируют и тем чаще перезаписывается файл состояния.",
-        demandPerBuy: "Сколько спроса добавляет каждая покупка предмета (спрос ограничен 1.0). По умолчанию 0.03, допустимо 0–1, разумно 0.01–0.1. Больше — цена растёт быстрее, когда игроки покупают.",
-        supplyPerSell: "Сколько предложения добавляет каждый проданный лот игрока (ограничено 1.0). По умолчанию 0.03, допустимо 0–1, разумно 0.01–0.1. Больше — цена падает быстрее, когда игроки продают.",
-        priceElasticity: "Насколько сильно разница спроса и предложения двигает целевую цену: база × (1 + эластичность × (спрос − предложение)). По умолчанию 0.3, допустимо 0–10, разумно 0.1–1. При 0 сделки цену не двигают.",
-        decayPerTick: "Какая доля накопленного спроса и предложения затухает каждый тик, чтобы старые сделки забывались. По умолчанию 0.08, допустимо 0–1, разумно 0.03–0.2. При 0 ничего не забывается.",
-        settleSpeed: "Какую часть разрыва до целевой цены цена закрывает за тик. По умолчанию 0.1, допустимо 0–1, разумно 0.05–0.3. Мало — цена плывёт медленно и плавно; 1 — прыгает сразу в цель.",
-        noise: "Случайный шум целевой цены на каждом тике, до ± этого значения (0.03 — это ±3%). По умолчанию 0.03, минимум 0, разумно 0–0.1. При 0 случайных колебаний нет.",
-        minPriceFactor: "Нижняя граница цены в долях базовой: ниже база × это значение она не упадёт. По умолчанию 0.7, минимум 0.01, разумно 0.3–1.",
-        maxPriceFactor: "Верхняя граница цены в долях базовой: выше база × это значение она не поднимется. По умолчанию 2.0, не ниже минимума, разумно 1.5–3. Она же режет надбавки раннего вайпа, событий и трендов.",
+        simIntervalMinutes: "Как часто тикает симуляция рынка, в реальных минутах. По умолчанию 60, минимум 1, разумно 15-180. Чем меньше, тем быстрее цены реагируют и тем чаще перезаписывается файл состояния.",
+        demandPerBuy: "Сколько спроса добавляет каждая покупка предмета (спрос ограничен 1.0). По умолчанию 0.03, допустимо 0-1, разумно 0.01-0.1. Чем больше значение, тем быстрее растёт цена, когда игроки покупают.",
+        supplyPerSell: "Сколько предложения добавляет каждый проданный лот игрока (ограничено 1.0). По умолчанию 0.03, допустимо 0-1, разумно 0.01-0.1. Чем больше значение, тем быстрее падает цена, когда игроки продают.",
+        priceElasticity: "Насколько сильно разница спроса и предложения двигает целевую цену: база × (1 + эластичность × (спрос - предложение)). По умолчанию 0.3, допустимо 0-10, разумно 0.1-1. При 0 сделки цену не двигают.",
+        decayPerTick: "Какая доля накопленного спроса и предложения затухает каждый тик, чтобы старые сделки забывались. По умолчанию 0.08, допустимо 0-1, разумно 0.03-0.2. При 0 ничего не забывается.",
+        settleSpeed: "Какую часть разрыва до целевой цены цена закрывает за тик. По умолчанию 0.1, допустимо 0-1, разумно 0.05-0.3. Малое значение даёт медленный плавный дрейф, а 1 прыгает сразу в цель.",
+        noise: "Случайный шум целевой цены на каждом тике, до ± этого значения (0.03 означает ±3%). По умолчанию 0.03, минимум 0, разумно 0-0.1. При 0 случайных колебаний нет.",
+        minPriceFactor: "Нижняя граница цены в долях базовой: ниже база × это значение она не упадёт. По умолчанию 0.7, минимум 0.01, разумно 0.3-1.",
+        maxPriceFactor: "Верхняя граница цены в долях базовой: выше база × это значение она не поднимется. По умолчанию 2.0, не ниже минимума, разумно 1.5-3. Она же режет надбавки раннего вайпа, событий и трендов.",
         wipe: "Надбавка раннего вайпа: сразу после вайпа цены выше и постепенно возвращаются к норме. Возраст вайпа считается от даты регистрации самого старого PMC-профиля.",
-        wipe_enabled: "Включает надбавку раннего вайпа. Больше всего толку с локальными ценами; с tarkovdev лучше выключить — живые средние уже учитывают стадию вайпа.",
+        wipe_enabled: "Включает надбавку раннего вайпа. Больше всего толку с локальными ценами; с tarkovdev лучше выключить, живые средние уже учитывают стадию вайпа.",
         wipe_startLengthDays: "Сколько дней длится спад надбавки. По умолчанию 14. При 0 надбавка отключена.",
         wipe_startMultiplier: "Множитель цены в нулевой день вайпа, линейно спадает до ×1.0 к концу периода. По умолчанию 1.8, минимум 0.01. Всё равно упирается в максимальный фактор цены.",
       },
       events: {
-        enabled: "Главный выключатель событий по времени. Выкл — события ниже игнорируются. Нужна ещё и включённая экономика.",
+        enabled: "Главный выключатель событий по времени. Если выключено, события ниже игнорируются. Нужна ещё и включённая экономика.",
         events: "Временные скачки цен, привязанные к возрасту вайпа. Пока возраст вайпа в окне дней события, его множитель действует на перечисленные предметы и категории. Пересекающиеся события перемножаются.",
         events_id: "Название события. Просто метка для вас и панели, на работу не влияет.",
         events_startDay: "День вайпа, с которого событие стартует (включительно). Считается от даты регистрации самого старого PMC-профиля.",
         events_endDay: "День вайпа, на котором событие заканчивается (не включительно): в этот день оно уже выключено.",
-        events_multiplier: "Множитель цены, пока событие активно: 1.15 — это +15%, 0.9 — это −10%. Применяется к целевой цене, которая всё равно ограничена минимальным и максимальным фактором.",
+        events_multiplier: "Множитель цены, пока событие активно: 1.15 даёт +15%, 0.9 даёт -10%. Применяется к целевой цене, которая всё равно ограничена минимальным и максимальным фактором.",
         events_categories: "ID категорий (родительский класс предметов), на которые действует событие.",
         events_items: "ID отдельных предметов (TPL), на которые действует событие. Если оба списка пусты, событие ничего не делает.",
       },
@@ -706,11 +786,11 @@ const I18N = {
         trends_category: "ID категории (родительский класс предметов), к которой применяется волна. Пустые записи игнорируются.",
         trends_periodDays: "Длина одного полного цикла вверх-вниз, в днях. По умолчанию 21. Должна быть больше 0, иначе запись игнорируется.",
         trends_amplitude: "Максимальное отклонение от 1.0: 0.15 качает цены примерно на ±15%. По умолчанию 0.15.",
-        trends_phase: "Сдвиг волны в радианах. 0 — старт с обычной цены и вверх; около 1.57 — старт с пика. По умолчанию 0.",
+        trends_phase: "Сдвиг волны в радианах. при 0 старт с обычной цены и вверх, при значении около 1.57 старт с пика. По умолчанию 0.",
       },
       levels: {
         enabled: "Главный выключатель блокировок по уровню: игроки ниже нужного уровня не могут покупать и продавать заблокированные предметы на барахолке. По умолчанию выкл; сам мод тоже должен быть включён. Применяется при сохранении.",
-        useSptDefaults: "Взять за основу встроенные уровни tiered flea из SPT (как в живой игре) и накатить поверх свои предметы и категории. Выкл — только ваши правила.",
+        useSptDefaults: "Взять за основу встроенные уровни tiered flea из SPT (как в живой игре) и накатить поверх свои предметы и категории. Если выключено, только ваши правила.",
         lockBuying: "Запретить покупку заблокированных предметов ниже нужного уровня. Заодно интерфейс барахолки показывает такие лоты заблокированными.",
         lockSelling: "Запретить выставлять и продавать заблокированные предметы ниже нужного уровня.",
         items: "ID предмета и уровень игрока, нужный для него. 0 снимает блокировку, пришедшую из дефолтов SPT. Правило по предмету важнее правила по категории.",
@@ -750,7 +830,7 @@ function tp(path, vars) {
 }
 
 function fmt(v, digits = 3) {
-  if (v == null || (typeof v === "number" && !Number.isFinite(v))) return "—";
+  if (v == null || (typeof v === "number" && !Number.isFinite(v))) return "-";
   if (typeof v !== "number") return String(v);
   const r = Math.round(v * 10 ** digits) / 10 ** digits;
   return String(r);
@@ -758,12 +838,12 @@ function fmt(v, digits = 3) {
 
 function fmtInt(v) {
   const n = Number(v);
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   return n.toLocaleString(lang === "ru" ? "ru-RU" : "en-US");
 }
 
 function fmtFactor(v) {
-  return Number.isFinite(v) ? v.toFixed(2) : "—";
+  return Number.isFinite(v) ? v.toFixed(2) : "-";
 }
 
 function clamp(v, lo, hi) {
@@ -828,6 +908,12 @@ const SECTIONS = [
 ];
 
 const GROUP_ORDER = ["overview", "market", "client", "system"];
+
+/** Outbound project links in the sidebar footer. Plain anchors: nothing is loaded from these hosts. */
+const SIDE_LINKS = [
+  { id: "github", label: "GitHub", href: "https://github.com/SVAR316/UltimateFlea", icon: "github" },
+  { id: "spmod", label: "sp-mod", href: "https://sp-mod.com/mod/2844/ultimate-flea", icon: "cube" },
+];
 
 let root = null;
 let sectionId = "home";
@@ -956,11 +1042,24 @@ function dismissToast(el, now = false) {
 async function getJson(url) {
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
-    const err = new Error(`${url} → HTTP ${res.status}`);
+    // Keep the URL and status for the console; only the server's own {error} text is shown to users.
+    const body = await res.json().catch(() => null);
+    const err = new Error(`${url} -> HTTP ${res.status}`);
     err.status = res.status;
+    err.serverMessage = body ? localized(body.error) : "";
     throw err;
   }
   return res.json();
+}
+
+/**
+ * User-facing text for a failed request: a plain sentence, plus the server's own message when it
+ * sent one. URLs and HTTP codes go to the console, never to the page.
+ */
+function failText(e, generic) {
+  console.error(generic, e);
+  const detail = e && typeof e === "object" ? e.serverMessage : "";
+  return detail ? `${generic}: ${detail}` : generic;
 }
 
 async function postJson(url, body) {
@@ -976,10 +1075,11 @@ async function postJson(url, body) {
 async function saveConfig(name, body) {
   const { ok, status, json } = await postJson(`${API}/config/${encodeURIComponent(name)}`, body);
   if (!ok) {
-    toast(json.error || `${t("toast.saveFailed")} (${status})`, "err");
+    toast(localized(json.error) || t("toast.saveFailed"), "err");
     return false;
   }
-  if (json.warning) toast(json.warning, "warn");
+  const warning = localized(json.warning);
+  if (warning) toast(warning, "warn");
   else if (json.restartRecommended) toast(t("toast.savedRestart"), "warn");
   else toast(t("toast.saved"), "ok");
   return true;
@@ -988,10 +1088,10 @@ async function saveConfig(name, body) {
 async function reloadFromDisk() {
   const { ok, status, json } = await postJson(`${API}/reload`, {});
   if (!ok) {
-    toast(json.error || `${t("toast.reloadFailed")} (${status})`, "err");
+    toast(localized(json.error) || t("toast.reloadFailed"), "err");
     return;
   }
-  toast(json.note || t("toast.reloaded"), "ok");
+  toast(localized(json.note) || t("toast.reloaded"), "ok");
 }
 
 /* ---------------------------------------------------------------- 7. icons */
@@ -1008,6 +1108,12 @@ const ICON_PATHS = {
   cart: '<circle cx="6" cy="13" r="1.1"/><circle cx="11.6" cy="13" r="1.1"/><path d="M1.6 2.6h1.8l1.9 7.3h7.1l1.4-5.2H4.1"/>',
   gear: '<circle cx="8" cy="8" r="2.2"/><path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M12.5 3.5l-1.3 1.3M4.8 11.2l-1.3 1.3"/>',
   presets: '<path d="M4.2 2.4h7.6a.8.8 0 0 1 .8.8v10.4L8 10.9l-4.6 2.7V3.2a.8.8 0 0 1 .8-.8Z"/><path d="M6 5.6h4"/>',
+  close: '<path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8"/>',
+  search: '<circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2l3.4 3.4"/>',
+  chevron: '<path d="M4 6.2l4 4 4-4"/>',
+  check: '<path d="M3.4 8.4l3 3 6.2-6.8"/>',
+  github: '<circle cx="4.5" cy="3.8" r="1.5"/><circle cx="4.5" cy="12.2" r="1.5"/><circle cx="11.5" cy="6.2" r="1.5"/><path d="M4.5 5.3v5.4M11.5 7.7c0 2.6-3 2.4-7 3.6"/>',
+  cube: '<path d="M8 1.8l5.6 3.1v6.2L8 14.2l-5.6-3.1V4.9L8 1.8Z"/><path d="M2.4 4.9L8 8l5.6-3.1M8 8v6.2"/>',
   table: '<rect x="2.2" y="2.8" width="11.6" height="10.4" rx="1.2"/><path d="M2.2 6.2h11.6M2.2 9.8h11.6M6.4 2.8v10.4"/>',
   flea: '<path d="M2.4 6.2 3.8 2.6h8.4l1.4 3.6"/><path d="M2.4 6.2a1.8 1.8 0 0 0 3.6 0 1.8 1.8 0 0 0 3.6 0 1.8 1.8 0 0 0 3.6 0"/><path d="M3.8 7.8v5.6h8.4V7.8"/>',
   sun: '<circle cx="8" cy="8" r="3"/><path d="M8 1.4v1.6M8 13v1.6M1.4 8h1.6M13 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1"/>',
@@ -1506,7 +1612,7 @@ function chartWipe(w, wipe) {
     const anchor = mx > pad.l + plotW * 0.7 ? "end" : "start";
     const tx = anchor === "end" ? mx - 6 : mx + 6;
     body += `<text class="c-val" x="${tx.toFixed(1)}" y="${pad.t - 8}" text-anchor="${anchor}" fill="${c.amber}">`
-      + `${escapeHtml(t("chart.wipeToday"))} ${escapeHtml(fmt(wipe.ageDays, 1))} · ×${escapeHtml(fmt(wipe.multiplier))}</text>`;
+      + `${escapeHtml(t("chart.wipeToday"))} ${escapeHtml(fmt(wipe.ageDays, 1))}, ×${escapeHtml(fmt(wipe.multiplier))}</text>`;
   }
 
   return svgWrap(w, h, tp("chart.ariaWipe", { n: curve.length }), body);
@@ -1715,33 +1821,42 @@ function renderValueControl(schemaPath, parts, key, value) {
 
   const options = ENUMS[schemaPath];
   if (options) {
-    const opts = options.map((o) =>
-      `<option value="${escapeHtml(o)}" ${o === value ? "selected" : ""}>${escapeHtml(o)}</option>`).join("");
-    const extra = options.includes(value) ? "" :
-      `<option value="${escapeHtml(String(value))}" selected>${escapeHtml(String(value))}</option>`;
-    return `<select data-path="${pathAttr}" data-kind="str" aria-label="${escapeHtml(fieldLabel(schemaPath, key))}">${extra}${opts}</select>`;
+    // A value outside the known set stays visible and selected instead of being silently replaced.
+    const list = options.includes(value) ? options : [String(value), ...options];
+    return dropdownHtml({
+      value: String(value), label: fieldLabel(schemaPath, key),
+      options: list.map((o) => ({ value: o, label: o })),
+      attrs: `data-path="${pathAttr}" data-kind="str"`,
+    });
   }
 
-  return `<input type="text" class="mono" value="${escapeHtml(String(value ?? ""))}"`
+  const input = `<input type="text" class="mono" value="${escapeHtml(String(value ?? ""))}"`
     + ` data-path="${pathAttr}" data-kind="str" aria-label="${escapeHtml(fieldLabel(schemaPath, key))}" />`;
+  const idKind = PICKERS[schemaPath];
+  return (idKind ? idCell(input, idKind, value) : input) + pickBtn(schemaPath, pathAttr, "field");
 }
 
 function renderStringList(schemaPath, parts, arr) {
   const pathAttr = escapeHtml(parts.join("/"));
-  const rows = arr.map((v, i) => `
-    <div class="row-item">
-      <input type="text" class="mono" value="${escapeHtml(String(v ?? ""))}"
+  const idKind = PICKERS[schemaPath];
+  const rows = arr.map((v, i) => {
+    const input = `<input type="text" class="mono" value="${escapeHtml(String(v ?? ""))}"
              data-path="${escapeHtml([...parts, String(i)].join("/"))}" data-kind="str"
-             aria-label="${escapeHtml(`${humanKey(parts[parts.length - 1])} ${i + 1}`)}" />
+             aria-label="${escapeHtml(`${humanKey(parts[parts.length - 1])} ${i + 1}`)}" />`;
+    return `
+    <div class="row-item">
+      ${idKind ? idCell(input, idKind, v) : input}
       <button type="button" class="x-btn" data-act="rm-item" data-path="${pathAttr}" data-index="${i}"
               aria-label="${escapeHtml(t("form.removeRow"))}" title="${escapeHtml(t("form.removeRow"))}">${icon("trash", 14)}</button>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
   return `<div class="rows" data-list="${pathAttr}">
     ${rows || `<div class="row-empty">${escapeHtml(t("form.emptyList"))}</div>`}
     <div class="row-add">
       <input type="text" class="mono" data-new-for="${pathAttr}" placeholder="${escapeHtml(t("form.newId"))}"
              aria-label="${escapeHtml(t("form.newId"))}" />
+      ${pickBtn(schemaPath, pathAttr, "list")}
       <button type="button" class="btn" data-act="add-item" data-path="${pathAttr}">${icon("plus", 14)}${escapeHtml(t("act.add"))}</button>
     </div>
   </div>`;
@@ -1750,13 +1865,15 @@ function renderStringList(schemaPath, parts, arr) {
 function renderMap(schemaPath, parts, obj) {
   const pathAttr = escapeHtml(parts.join("/"));
   const keys = Object.keys(obj);
+  const idKind = PICKERS[schemaPath];
   const rows = keys.map((k) => {
     const v = obj[k];
     const isNum = typeof v === "number";
+    const keyInput = `<input type="text" class="mono" value="${escapeHtml(k)}" data-map="${pathAttr}" data-map-field="key"
+             aria-label="${escapeHtml(t("form.mapKey"))}" />`;
     return `
     <div class="row-item" data-map-row="${escapeHtml(k)}">
-      <input type="text" class="mono" value="${escapeHtml(k)}" data-map="${pathAttr}" data-map-field="key"
-             aria-label="${escapeHtml(t("form.mapKey"))}" />
+      ${idKind ? idCell(keyInput, idKind, k) : keyInput}
       <input type="${isNum ? "number" : "text"}" ${isNum ? `step="${escapeHtml(numberStep(k, v))}"` : ""}
              value="${escapeHtml(String(v ?? ""))}" data-map="${pathAttr}" data-map-field="value"
              data-num="${isNum ? "1" : "0"}" aria-label="${escapeHtml(t("form.mapValue"))}" />
@@ -1770,6 +1887,7 @@ function renderMap(schemaPath, parts, obj) {
     <div class="row-add">
       <input type="text" class="mono" data-new-key="${pathAttr}" placeholder="${escapeHtml(t("form.mapKey"))}"
              aria-label="${escapeHtml(t("form.mapKey"))}" />
+      ${pickBtn(schemaPath, pathAttr, "map")}
       <input type="number" step="0.01" data-new-val="${pathAttr}" placeholder="${escapeHtml(t("form.mapValue"))}"
              aria-label="${escapeHtml(t("form.mapValue"))}" />
       <button type="button" class="btn" data-act="add-map" data-path="${pathAttr}">${icon("plus", 14)}${escapeHtml(t("act.add"))}</button>
@@ -1783,14 +1901,17 @@ function renderObjectList(schemaPath, parts, arr) {
 
   const cards = arr.map((entry, i) => {
     const titleKey = ENTRY_TITLE_KEYS.find((k) => entry && entry[k] != null && entry[k] !== "");
-    const title = titleKey ? String(entry[titleKey]) : `${t("form.entry")} ${i + 1}`;
+    const rawTitle = titleKey ? String(entry[titleKey]) : "";
+    const titleKind = titleKey === "category" ? "category" : titleKey === "tpl" ? "item" : "";
+    const title = rawTitle ? (titleKind && idLookupName(rawTitle, titleKind)) || rawTitle : `${t("form.entry")} ${i + 1}`;
+    const titleAttrs = titleKind ? ` data-idtitle="${titleKind}" data-idval="${escapeHtml(rawTitle)}"` : "";
     const inner = isPlainObject(entry)
       ? Object.keys(entry).map((k) =>
           renderField(schemaChild(itemSchema, k), [...parts, String(i), k], k, entry[k])).join("")
       : `<div class="row-empty">${escapeHtml(t("form.emptyList"))}</div>`;
     return `<div class="obj-card">
       <div class="obj-card-head">
-        <div class="obj-card-title">${icon("calendar", 14)}<span>${escapeHtml(truncate(title, 48))}</span></div>
+        <div class="obj-card-title">${icon("calendar", 14)}<span${titleAttrs}>${escapeHtml(truncate(title, 48))}</span></div>
         <button type="button" class="x-btn" data-act="rm-obj" data-path="${pathAttr}" data-index="${i}"
                 aria-label="${escapeHtml(t("act.remove"))}" title="${escapeHtml(t("act.remove"))}">${icon("trash", 14)}</button>
       </div>
@@ -1997,8 +2118,8 @@ function bindCfgSection(bodyEl, section) {
       return;
     }
 
-    if (el.hasAttribute("data-map")) { commitMapEdit(el); return; }
-    if (el.hasAttribute("data-path")) commitField(el);
+    if (el.hasAttribute("data-map")) { commitMapEdit(el); refreshIdNameFor(el); return; }
+    if (el.hasAttribute("data-path")) { commitField(el); refreshIdNameFor(el); }
   });
 
   bodyEl.addEventListener("change", (e) => {
@@ -2014,6 +2135,8 @@ function bindCfgSection(bodyEl, section) {
     if (!btn || !bodyEl.contains(btn)) return;
     const act = btn.getAttribute("data-act");
     const parts = (btn.getAttribute("data-path") || "").split("/").filter(Boolean);
+
+    if (act === "pick") { void openPicker(btn); return; }
 
     if (act === "peek") {
       const input = btn.parentElement?.querySelector("[data-secret]");
@@ -2229,8 +2352,8 @@ function renderOverview(data) {
     ? `<p class="note tight">${escapeHtml(tp("chart.wipeStart", {
         days: fmt(wipe.startLengthDays, 1), mult: fmt(wipe.startMultiplier),
       }))}${wipe.ageDays != null
-        ? ` · ${escapeHtml(t("chart.wipeCurrent"))} ×${escapeHtml(fmt(wipe.multiplier))}`
-        : ` · ${escapeHtml(t("chart.wipeNoProfile"))}`}</p>`
+        ? `. ${escapeHtml(t("chart.wipeCurrent"))} ×${escapeHtml(fmt(wipe.multiplier))}`
+        : `. ${escapeHtml(t("chart.wipeNoProfile"))}`}</p>`
     : "";
 
   const pool = data.pool || {};
@@ -2241,7 +2364,7 @@ function renderOverview(data) {
       ${kpiCard(t("kpi.mod"), data.mod?.enabled ? t("enabled") : t("disabled"), String(data.mod?.priceSource || ""))}
       ${kpiCard(t("kpi.items"), fmtInt(sum.itemCount ?? eco.itemCount), `${fmtInt(sum.floatingCount ?? 0)} ${t("kpi.floating").toLowerCase()}`)}
       ${kpiCard(t("kpi.avgFactor"), fmtFactor(sum.avgFactor ?? eco.averageFactor), `${fmtInt(sum.fixedCount ?? eco.fixedCount)} ${t("kpi.fixed").toLowerCase()}`)}
-      ${kpiCard(t("kpi.wipeDay"), eco.wipeAgeDays == null ? "—" : fmt(eco.wipeAgeDays, 1),
+      ${kpiCard(t("kpi.wipeDay"), eco.wipeAgeDays == null ? "-" : fmt(eco.wipeAgeDays, 1),
         eco.wipeAgeDays == null ? t("kpi.noProfile") : `×${fmt(eco.wipeMultiplier)}`)}
       ${kpiCard(t("kpi.buys"), fmtInt(trades.totalBuys ?? 0), "", "buys")}
       ${kpiCard(t("kpi.sells"), fmtInt(trades.totalSells ?? 0), "", "sells")}
@@ -2283,16 +2406,16 @@ function renderOverview(data) {
         <dl class="kv">
           <dt>${escapeHtml(t("overview.version"))}</dt><dd>${escapeHtml(String(data.version || "").split("+")[0])}</dd>
           <dt>${escapeHtml(t("overview.webUi"))}</dt><dd class="mono">${escapeHtml(data.webUi || "/ultimateflea/app.html")}</dd>
-          <dt>${escapeHtml(t("overview.priceSource"))}</dt><dd>${escapeHtml(String(data.mod?.priceSource || "—"))}</dd>
+          <dt>${escapeHtml(t("overview.priceSource"))}</dt><dd>${escapeHtml(String(data.mod?.priceSource || "-"))}</dd>
           <dt>${escapeHtml(t("overview.poolManager"))}</dt><dd>${escapeHtml(data.mod?.enablePoolManager ? t("on") : t("off"))}</dd>
           <dt>${escapeHtml(t("overview.pricing"))}</dt><dd>${escapeHtml(data.mod?.enablePricing ? t("on") : t("off"))}</dd>
           <dt>${escapeHtml(t("overview.economySim"))}</dt><dd>${escapeHtml(data.mod?.enableEconomy ? t("on") : t("off"))}</dd>
           <dt>${escapeHtml(t("overview.playerOffersOnly"))}</dt><dd>${escapeHtml(data.mod?.playerOffersOnly ? t("on") : t("off"))}</dd>
           <dt>${escapeHtml(t("overview.quickList"))}</dt><dd>${escapeHtml(data.mod?.quickListFromStash ? t("on") : t("off"))}</dd>
-          <dt>${escapeHtml(t("kpi.poolMode"))}</dt><dd>${escapeHtml(String(pool.mode || "—"))}</dd>
+          <dt>${escapeHtml(t("kpi.poolMode"))}</dt><dd>${escapeHtml(String(pool.mode || "-"))}</dd>
           <dt>${escapeHtml(t("overview.levels"))}</dt><dd>${escapeHtml(levels.enabled ? t("on") : t("off"))}</dd>
           <dt>${escapeHtml(t("overview.trends"))}</dt><dd>${escapeHtml(data.trends?.enabled ? t("on") : t("off"))}</dd>
-          <dt>${escapeHtml(t("overview.stateFile"))}</dt><dd>${escapeHtml(data.stateFileExists ? t("overview.present") : t("overview.missing"))} · ${escapeHtml(fmtInt(data.stateEntries ?? 0))}</dd>
+          <dt>${escapeHtml(t("overview.stateFile"))}</dt><dd>${escapeHtml(data.stateFileExists ? t("overview.present") : t("overview.missing"))}, ${escapeHtml(fmtInt(data.stateEntries ?? 0))}</dd>
         </dl>
         <p class="note tight">${escapeHtml(tp("overview.poolDetail", {
           add: fmtInt(pool.add ?? 0), remove: fmtInt(pool.remove ?? 0),
@@ -2300,7 +2423,7 @@ function renderOverview(data) {
         }))}</p>
         <p class="note tight">${escapeHtml(tp("overview.levelsDetail", {
           items: fmtInt(levels.items ?? 0), categories: fmtInt(levels.categories ?? 0), rules: fmtInt(levels.rules ?? 0),
-        }))}${levels.useSptDefaults ? ` · ${escapeHtml(t("overview.sptDefaults"))}` : ""}</p>
+        }))}${levels.useSptDefaults ? `. ${escapeHtml(t("overview.sptDefaults"))}` : ""}</p>
       </section>
     </div>
   `;
@@ -2356,9 +2479,15 @@ function buildStateRows(raw) {
   return out;
 }
 
+/** Name line for the state table; empty while the catalog is missing, "unknown ID" when it has no entry. */
+function stateNameHtml(tpl) {
+  const html = idNameHtml(tpl, "item");
+  return html ? `<span class="tpl-name">${html}</span>` : "";
+}
+
 function filteredStateRows() {
-  const q = stateQuery.trim().toLowerCase();
-  const rows = q ? stateRows.filter((r) => r.tpl.toLowerCase().includes(q)) : stateRows;
+  const q = pickNorm(stateQuery.trim());
+  const rows = q ? stateRows.filter((r) => r.tpl.toLowerCase().includes(q) || pickNorm(idLookupName(r.tpl, "item")).includes(q)) : stateRows;
   const { key, dir } = stateSort;
   return [...rows].sort((a, b) => {
     const av = a[key];
@@ -2401,7 +2530,7 @@ function renderStateTable() {
 
   const body = page.length
     ? page.map((r) => `<tr>
-        <td class="tpl" title="${escapeHtml(r.tpl)}">${escapeHtml(r.tpl)}</td>
+        <td class="tpl" title="${escapeHtml(r.tpl)}">${stateNameHtml(r.tpl)}<span>${escapeHtml(r.tpl)}</span></td>
         <td class="r num">${escapeHtml(fmtInt(Math.round(r.basePrice)))}</td>
         <td class="r num">${escapeHtml(fmtInt(Math.round(r.currentPrice)))}</td>
         <td class="r">${factorCue(r.factor)}</td>
@@ -2546,7 +2675,7 @@ const presetUi = {
   status: "idle",           // idle | ok | absent (older server build) | error
   error: "",
   list: [],
-  open: new Set(),          // ids with the preview expanded
+  previewId: "",            // id shown in the preview overlay, "" when closed
   previews: new Map(),      // id -> "loading" | { configs } | { error }
   applying: "",             // id being applied, "" when idle
   applied: new Map(),       // id -> config names written by the last apply
@@ -2556,9 +2685,11 @@ const presetUi = {
 const presetBound = new WeakSet();
 
 /** Server strings are { en, ru } objects; tolerate a bare string too. */
+/** Messages from the server are either a plain string (older builds) or { en, ru }. */
 function localized(v) {
   if (typeof v === "string") return v;
-  return (v && (v[lang] || v.en)) || "";
+  const s = v && typeof v === "object" ? v[lang] || v.en : "";
+  return typeof s === "string" ? s : "";
 }
 
 /** Config names as the nav shows them (Pool, Economy, ...), humanised when unknown. */
@@ -2574,7 +2705,7 @@ function sectionIdForConfig(name) {
 }
 
 async function loadPresets() {
-  presetUi.open.clear();
+  presetUi.previewId = "";
   presetUi.previews.clear();
   presetUi.applied.clear();
   try {
@@ -2585,14 +2716,14 @@ async function loadPresets() {
     presetUi.list = [];
     // A 404 just means an older server build without the endpoints: not an error.
     presetUi.status = e?.status === 404 ? "absent" : "error";
-    presetUi.error = e instanceof Error ? e.message : String(e);
+    presetUi.error = failText(e, t("presets.loadFailed"));
   }
 }
 
 function renderPresetPreview(id) {
   const entry = presetUi.previews.get(id);
   if (entry === "loading" || !entry) return `<p class="note tight">${escapeHtml(t("presets.loadingPreview"))}</p>`;
-  if (entry.error) return `<div class="err-box">${escapeHtml(t("presets.previewFailed"))}: ${escapeHtml(entry.error)}</div>`;
+  if (entry.error) return `<div class="err-box">${escapeHtml(entry.error)}</div>`;
 
   const blocks = Object.entries(entry.configs).map(([name, value]) => `
     <div class="preset-cfg">
@@ -2603,15 +2734,29 @@ function renderPresetPreview(id) {
   return `<div class="preset-preview">${blocks || `<p class="note tight">${escapeHtml(t("form.emptyMap"))}</p>`}</div>`;
 }
 
+/** Overlay shell, kept generic (.overlay) so other dialogs can reuse it. */
+function renderPresetOverlay() {
+  const p = presetUi.list.find((x) => x.id === presetUi.previewId);
+  if (!p) return "";
+  return `<div class="overlay" data-preset-act="close-preview" data-backdrop="1">
+    <div class="overlay-panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(localized(p.name) || p.id)}">
+      <div class="overlay-head">
+        <h2 class="card-title">${escapeHtml(localized(p.name) || p.id)}</h2>
+        <button type="button" class="btn icon ghost" data-preset-act="close-preview" data-close
+                aria-label="${escapeHtml(t("act.dismiss"))}" title="${escapeHtml(t("act.dismiss"))}">${icon("close", 14)}</button>
+      </div>
+      <div class="overlay-body">${renderPresetPreview(p.id)}</div>
+    </div>
+  </div>`;
+}
+
 function renderPresetCard(p) {
   const id = escapeHtml(p.id);
   const available = p.available !== false;
   const name = localized(p.name) || p.id;
   const desc = localized(p.description);
   const targets = Array.isArray(p.targets) ? p.targets : [];
-  const tags = Array.isArray(p.tags) ? p.tags : [];
   const requires = Array.isArray(p.requires) ? p.requires : [];
-  const isOpen = presetUi.open.has(p.id);
   const applying = presetUi.applying === p.id;
   const applied = presetUi.applied.get(p.id);
 
@@ -2619,11 +2764,8 @@ function renderPresetCard(p) {
     ? `<div class="preset-meta"><span class="preset-meta-label">${escapeHtml(t("presets.touches"))}</span>${
         targets.map((n) => `<span class="pill">${escapeHtml(configLabel(n))}</span>`).join("")}</div>`
     : "";
-  const tagRow = tags.length
-    ? `<div class="preset-meta">${tags.map((tag) => `<span class="tag">${escapeHtml(String(tag))}</span>`).join("")}</div>`
-    : "";
   const reason = available ? "" : `<div class="warn-box">${icon("lock", 14)}<span>${
-    escapeHtml(p.unavailableReason || t("presets.unavailable"))}</span></div>`;
+    escapeHtml(localized(p.unavailableReason) || t("presets.unavailable"))}</span></div>`;
   const result = applied
     ? `<div class="preset-meta"><span class="preset-meta-label">${escapeHtml(t("presets.appliedTo"))}</span>${
         applied.map((n) => {
@@ -2643,14 +2785,12 @@ function renderPresetCard(p) {
     </div>
     ${desc ? `<p class="preset-desc">${escapeHtml(desc)}</p>` : ""}
     ${touches}
-    ${tagRow}
     ${reason}
     ${result}
     <div class="preset-actions">
-      <button type="button" class="btn" data-preset-act="preview" data-id="${id}" aria-expanded="${isOpen}">${escapeHtml(isOpen ? t("presets.hidePreview") : t("presets.preview"))}</button>
+      <button type="button" class="btn" data-preset-act="preview" data-id="${id}" aria-haspopup="dialog" ${available ? "" : "disabled"}>${escapeHtml(t("presets.preview"))}</button>
       <button type="button" class="btn primary" data-preset-act="apply" data-id="${id}" ${available && !presetUi.applying ? "" : "disabled"}>${escapeHtml(applying ? t("presets.applying") : t("presets.apply"))}</button>
     </div>
-    ${isOpen ? renderPresetPreview(p.id) : ""}
   </article>`;
 }
 
@@ -2659,12 +2799,13 @@ function renderPresets() {
     return `<div class="empty"><strong>${escapeHtml(t("presets.absent"))}</strong><span>${escapeHtml(t("presets.absentHint"))}</span></div>`;
   }
   if (presetUi.status === "error") {
-    return `<div class="err-box">${escapeHtml(t("presets.loadFailed"))}: ${escapeHtml(presetUi.error)}</div>`;
+    return `<div class="err-box">${escapeHtml(presetUi.error)}</div>`;
   }
   if (!presetUi.list.length) return `<div class="empty">${escapeHtml(t("presets.empty"))}</div>`;
   return `<div class="stack tight">
     <p class="note tight">${escapeHtml(t("presets.intro"))}</p>
     <div class="preset-list">${presetUi.list.map(renderPresetCard).join("")}</div>
+    ${renderPresetOverlay()}
   </div>`;
 }
 
@@ -2675,13 +2816,15 @@ function repaintPresets() {
   if (body) body.innerHTML = renderPresets();
 }
 
-async function togglePresetPreview(id) {
-  if (presetUi.open.has(id)) {
-    presetUi.open.delete(id);
-    repaintPresets();
-    return;
-  }
-  presetUi.open.add(id);
+function closePresetPreview() {
+  if (!presetUi.previewId) return;
+  presetUi.previewId = "";
+  repaintPresets();
+}
+
+async function openPresetPreview(id) {
+  if (presetUi.list.find((x) => x.id === id)?.available === false) return;
+  presetUi.previewId = id;
   const cached = presetUi.previews.get(id);
   if (!cached || cached.error) {
     presetUi.previews.set(id, "loading");
@@ -2690,10 +2833,13 @@ async function togglePresetPreview(id) {
       const data = await getJson(`${API}/presets/${encodeURIComponent(id)}`);
       presetUi.previews.set(id, { configs: isPlainObject(data?.configs) ? data.configs : {} });
     } catch (e) {
-      presetUi.previews.set(id, { error: e instanceof Error ? e.message : String(e) });
+      presetUi.previews.set(id, { error: failText(e, t("presets.previewFailed")) });
     }
   }
+  // The user may have closed or switched the overlay while the request was in flight.
+  if (presetUi.previewId !== id) return;
   repaintPresets();
+  root?.querySelector("[data-close]")?.focus();
 }
 
 async function applyPreset(id) {
@@ -2708,26 +2854,36 @@ async function applyPreset(id) {
   try {
     const { ok, status, json } = await postJson(`${API}/presets/${encodeURIComponent(id)}/apply`, {});
     if (!ok) {
-      toast(json.error || `${t("presets.applyFailed")} (${status})`, "err");
+      console.error("preset apply failed", status, json);
+      toast(localized(json.error) || t("presets.applyFailed"), "err");
       return;
     }
     const applied = Array.isArray(json.applied) ? json.applied : (p.targets || []);
     presetUi.applied.set(id, applied);
-    if (json.warning) toast(json.warning, "warn");
+    const warning = localized(json.warning);
+    if (warning) toast(warning, "warn");
     else if (json.restartRecommended) toast(t("presets.appliedRestart"), "warn");
     else toast(tp("presets.applied", { configs: applied.map(configLabel).join(", ") }), "ok");
     // Config editors always fetch fresh values when opened, so there is no stale draft to
     // patch; the result row links straight to the configs that changed.
     if (applied.includes("mod")) void refreshBrand();
   } catch (e) {
-    toast(`${t("presets.applyFailed")}: ${e instanceof Error ? e.message : String(e)}`, "err");
+    toast(failText(e, t("presets.applyFailed")), "err");
   } finally {
     presetUi.applying = "";
     repaintPresets();
   }
 }
 
+let presetKeysBound = false;
+
 function bindPresets(bodyEl) {
+  if (!presetKeysBound) {
+    presetKeysBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && presetUi.previewId) closePresetPreview();
+    });
+  }
   if (presetBound.has(bodyEl)) return;
   presetBound.add(bodyEl);
   bodyEl.addEventListener("click", (e) => {
@@ -2735,10 +2891,730 @@ function bindPresets(bodyEl) {
     if (!btn || btn.disabled) return;
     const act = btn.getAttribute("data-preset-act");
     const id = btn.getAttribute("data-id") || "";
-    if (act === "preview") void togglePresetPreview(id);
+    // The backdrop carries the close action too, but a click inside the panel must not close it.
+    if (act === "close-preview" && btn.hasAttribute("data-backdrop") && e.target !== btn) return;
+    if (act === "preview") void openPresetPreview(id);
+    else if (act === "close-preview") closePresetPreview();
     else if (act === "apply") void applyPreset(id);
     else if (act === "open-config") navigate(btn.getAttribute("data-name"));
   });
+}
+
+/* ---- dropdown ----------------------------------------------------------- */
+
+/*
+ * A native <select> cannot have its option list themed, so every select is a button plus a
+ * popup. A hidden native <select> stays underneath as the source of truth: the form handlers
+ * keep reading its value and keep receiving its input/change events, exactly as before.
+ *
+ * The popup is appended to <body>, not next to the button: that escapes overflow clipping and,
+ * for the picker overlay (whose backdrop-filter would trap a fixed child), its containing block.
+ */
+
+const DD_MAX_HEIGHT = 288;
+const DD_GAP = 4;
+const DD_EDGE = 8;
+
+let ddSeq = 0;
+let ddOpen = null;          // { btn, native, popup, active }
+let ddBound = false;
+let ddTypeBuf = "";
+let ddTypeTimer = 0;
+
+/** options: [{ value, label }]. attrs: raw attributes for the hidden <select> (data-path etc.). */
+function dropdownHtml({ value, options, attrs = "", label }) {
+  const cur = options.find((o) => o.value === value) || options[0];
+  const id = `dd-${++ddSeq}`;
+  const opts = options.map((o) =>
+    `<option value="${escapeHtml(o.value)}"${o === cur ? " selected" : ""}>${escapeHtml(o.label)}</option>`).join("");
+  return `<div class="dd" data-dd>
+    <select hidden tabindex="-1" aria-hidden="true" ${attrs}>${opts}</select>
+    <button type="button" class="dd-btn" role="combobox" aria-haspopup="listbox" aria-expanded="false"
+            aria-controls="${id}" aria-label="${escapeHtml(`${label}: ${cur?.label ?? ""}`)}" data-dd-label="${escapeHtml(label)}">
+      <span class="dd-val">${escapeHtml(cur?.label ?? "")}</span>${icon("chevron", 14)}
+    </button>
+  </div>`;
+}
+
+function ddOptionEls() {
+  return ddOpen ? [...ddOpen.popup.children] : [];
+}
+
+function ddSetActive(i, scroll = true) {
+  if (!ddOpen) return;
+  const els = ddOptionEls();
+  if (!els.length) return;
+  const next = clamp(i, 0, els.length - 1);
+  els[ddOpen.active]?.classList.remove("is-active");
+  ddOpen.active = next;
+  els[next].classList.add("is-active");
+  ddOpen.btn.setAttribute("aria-activedescendant", els[next].id);
+  if (scroll) els[next].scrollIntoView({ block: "nearest" });
+}
+
+/** Place the popup under the button, or above it when there is no room below. */
+function ddPosition() {
+  if (!ddOpen) return;
+  const { btn, popup } = ddOpen;
+  const r = btn.getBoundingClientRect();
+  const below = window.innerHeight - r.bottom - DD_EDGE - DD_GAP;
+  const above = r.top - DD_EDGE - DD_GAP;
+
+  popup.style.minWidth = `${Math.round(r.width)}px`;
+  popup.style.maxHeight = `${DD_MAX_HEIGHT}px`;
+  const natural = Math.min(popup.scrollHeight, DD_MAX_HEIGHT);
+  const flip = natural > below && above > below;
+  const room = Math.max(80, flip ? above : below);
+  popup.style.maxHeight = `${Math.min(DD_MAX_HEIGHT, room)}px`;
+
+  const h = Math.min(natural, room);
+  popup.style.top = `${Math.round(flip ? r.top - DD_GAP - h : r.bottom + DD_GAP)}px`;
+  const w = popup.offsetWidth;
+  popup.style.left = `${Math.round(clamp(r.left, DD_EDGE, Math.max(DD_EDGE, window.innerWidth - w - DD_EDGE)))}px`;
+  popup.classList.toggle("is-flipped", flip);
+}
+
+function openDropdown(btn) {
+  const native = btn.parentElement?.querySelector("select");
+  if (!native || btn.disabled) return;
+  closeDropdown();
+
+  const popup = document.createElement("div");
+  popup.className = "dd-popup";
+  popup.id = btn.getAttribute("aria-controls") || "";
+  popup.setAttribute("role", "listbox");
+  popup.setAttribute("aria-label", btn.getAttribute("data-dd-label") || "");
+  popup.innerHTML = [...native.options].map((o, i) =>
+    `<div class="dd-opt" role="option" id="${escapeHtml(popup.id)}-o${i}" data-dd-i="${i}"
+          aria-selected="${o.selected}">${escapeHtml(o.textContent)}</div>`).join("");
+  document.body.appendChild(popup);
+
+  ddOpen = { btn, native, popup, active: native.selectedIndex };
+  btn.setAttribute("aria-expanded", "true");
+  btn.parentElement.classList.add("is-open");
+  ddPosition();
+  ddSetActive(native.selectedIndex);
+}
+
+function closeDropdown(refocus = false) {
+  if (!ddOpen) return;
+  const { btn, popup } = ddOpen;
+  ddOpen = null;
+  popup.remove();
+  btn.setAttribute("aria-expanded", "false");
+  btn.removeAttribute("aria-activedescendant");
+  btn.parentElement?.classList.remove("is-open");
+  if (refocus && btn.isConnected) btn.focus();
+}
+
+/** Commit an option: update the hidden select and fire the events a native select would. */
+function pickDropdown(i) {
+  if (!ddOpen) return;
+  const { btn, native } = ddOpen;
+  const changed = native.selectedIndex !== i;
+  if (changed) {
+    native.selectedIndex = i;
+    const text = native.options[i].textContent;
+    btn.querySelector(".dd-val").textContent = text;
+    btn.setAttribute("aria-label", `${btn.getAttribute("data-dd-label")}: ${text}`);
+  }
+  closeDropdown(true);
+  if (changed) {
+    native.dispatchEvent(new Event("input", { bubbles: true }));
+    native.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
+/** Type-ahead like a native select: jump to the next option starting with what was typed. */
+function ddTypeAhead(ch) {
+  window.clearTimeout(ddTypeTimer);
+  ddTypeTimer = window.setTimeout(() => { ddTypeBuf = ""; }, 700);
+  ddTypeBuf += ch.toLowerCase();
+  const els = ddOptionEls();
+  const from = ddTypeBuf.length > 1 ? ddOpen.active : ddOpen.active + 1;
+  for (let k = 0; k < els.length; k++) {
+    const idx = (from + k) % els.length;
+    if (els[idx].textContent.trim().toLowerCase().startsWith(ddTypeBuf)) { ddSetActive(idx); return; }
+  }
+}
+
+function bindDropdowns() {
+  if (ddBound) return;
+  ddBound = true;
+
+  document.addEventListener("click", (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+    const btn = target?.closest(".dd-btn");
+    if (btn) {
+      if (ddOpen && ddOpen.btn === btn) closeDropdown();
+      else openDropdown(btn);
+      return;
+    }
+    const opt = target?.closest(".dd-opt");
+    if (opt && ddOpen?.popup.contains(opt)) { pickDropdown(Number(opt.getAttribute("data-dd-i"))); return; }
+    closeDropdown();
+  });
+
+  // Capture phase, and handled keys are stopped, so Esc or arrows on an open dropdown do not
+  // also reach the picker overlay or its row navigation underneath.
+  document.addEventListener("keydown", (e) => {
+    const onBtn = e.target instanceof Element && e.target.closest(".dd-btn");
+    if (!ddOpen && !onBtn) return;
+    const eat = () => { e.preventDefault(); e.stopPropagation(); };
+
+    if (!ddOpen) {
+      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown" || e.key === "ArrowUp") {
+        eat();
+        openDropdown(e.target.closest(".dd-btn"));
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        eat();
+        openDropdown(e.target.closest(".dd-btn"));
+        if (ddOpen) ddTypeAhead(e.key);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowDown": eat(); ddSetActive(ddOpen.active + 1); break;
+      case "ArrowUp": eat(); ddSetActive(ddOpen.active - 1); break;
+      case "Home": eat(); ddSetActive(0); break;
+      case "End": eat(); ddSetActive(ddOptionEls().length - 1); break;
+      case "Enter": eat(); pickDropdown(ddOpen.active); break;
+      case " ":
+        eat();
+        if (ddTypeBuf) ddTypeAhead(" ");
+        else pickDropdown(ddOpen.active);
+        break;
+      case "Escape": eat(); closeDropdown(true); break;
+      case "Tab": closeDropdown(); break;
+      default:
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { eat(); ddTypeAhead(e.key); }
+    }
+  }, true);
+
+  // A fixed popup would drift from its button if the page moved under it, so just close.
+  window.addEventListener("resize", () => closeDropdown());
+  window.addEventListener("scroll", (e) => {
+    if (ddOpen && !ddOpen.popup.contains(e.target)) closeDropdown();
+  }, true);
+}
+
+/* ---- item picker -------------------------------------------------------- */
+
+const PICK_MAX = 100;
+const PICK_DEBOUNCE_MS = 120;
+
+/** Item catalog from GET /items, fetched once on first open and kept for the page session. */
+const catalog = {
+  status: "idle",           // idle | loading | ok | absent (older server build) | error
+  error: "",
+  items: [],                // { id, en, ru, se, sr, cat, src (string), ic (real icon exists), hay }
+  cats: [],                 // { id, name, nameRu, icon, hay }
+  catById: new Map(),
+  itemById: new Map(),
+  sources: new Map(),       // String(id) -> { id, guid, name, author }
+  promise: null,
+};
+
+/** Open picker session, null when closed. */
+let picker = null;
+let pickerSeq = 0;
+let pickerHost = null;
+let pickerKeysBound = false;
+let pickerDebounce = 0;
+const pickerBound = new WeakSet();
+
+/** schema path -> what the field holds. Everything else keeps plain manual entry. */
+const PICKERS = {
+  "pool.add": "item",
+  "pool.remove": "item",
+  "pool.addCategories": "category",
+  "pool.removeCategories": "category",
+  "pricing.fixedPrices": "item",
+  "pricing.itemMultipliers": "item",
+  "pricing.categoryMultipliers": "category",
+  "levels.items": "item",
+  "levels.categories": "category",
+  "events.events[].categories": "category",
+  "events.events[].items": "item",
+  "trends.trends[].categories": "category",
+  "trends.trends[].items": "item",
+  "trends.trends[].category": "category",
+};
+
+/** A multiplier of 0 would zero a price; 1 is the neutral starting row. */
+const PICK_MAP_DEFAULTS = { "pricing.itemMultipliers": 1, "pricing.categoryMultipliers": 1 };
+
+/** Lowercase, and treat ё as е so either spelling finds the same item. */
+function pickNorm(s) {
+  return String(s ?? "").toLowerCase().replace(/ё/g, "е");
+}
+
+function pickHash(str, mod) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h) % mod;
+}
+
+/** Only same-origin paths: the dashboard never fetches an image from elsewhere. */
+function pickSafeIcon(icon) {
+  return typeof icon === "string" && icon.startsWith("/") && !icon.startsWith("//") && !icon.includes("\\") ? icon : null;
+}
+
+function indexCatalog(data) {
+  const sources = new Map();
+  for (const s of Array.isArray(data?.sources) ? data.sources : []) {
+    if (s) sources.set(String(s.id), s);
+  }
+
+  const cats = (Array.isArray(data?.categories) ? data.categories : [])
+    .filter((c) => c && typeof c.id === "string")
+    .map((c) => ({ ...c, icon: pickSafeIcon(c.icon), hay: pickNorm(`${c.id} ${c.name} ${c.nameRu}`) }));
+
+  // The haystack is built once here, not per keystroke.
+  const items = (Array.isArray(data?.items) ? data.items : [])
+    .filter((it) => it && typeof it.id === "string")
+    .map((it) => {
+      // 0 = vanilla, an id in `sources` = that mod, -1 = unknown. Anything else (an id with no
+      // sources entry, a missing or odd value) is folded into -1 so it never renders blank.
+      let src = String(it.src ?? 0);
+      if (src !== "0" && !sources.has(src)) src = "-1";
+      const srcName = src === "0" ? "vanilla" : src === "-1" ? "unknown неизвестный" : (sources.get(src)?.name || "");
+      return {
+        id: it.id, en: it.en || "", ru: it.ru || "", se: it.se || "", sr: it.sr || "", cat: it.cat || "", src, ic: it.ic === true,
+        hay: pickNorm(`${it.id} ${it.en} ${it.ru} ${it.se} ${it.sr} ${srcName}`),
+      };
+    });
+
+  catalog.sources = sources;
+  catalog.cats = cats;
+  catalog.catById = new Map(cats.map((c) => [c.id, c]));
+  catalog.items = items;
+  catalog.itemById = new Map(items.map((it) => [it.id, it]));
+}
+
+function loadCatalog() {
+  if (catalog.status === "ok" || catalog.status === "absent") return Promise.resolve();
+  if (catalog.promise) return catalog.promise;
+  catalog.status = "loading";
+  catalog.promise = (async () => {
+    try {
+      indexCatalog(await getJson(`${API}/items`));
+      catalog.status = "ok";
+    } catch (e) {
+      // 404 = older server build; anything else may be transient, so it is retried on the next open.
+      catalog.status = e?.status === 404 ? "absent" : "error";
+      catalog.error = failText(e, t("picker.loadFailed"));
+    } finally {
+      catalog.promise = null;
+    }
+  })();
+  return catalog.promise;
+}
+
+/** Readable name for an id, or "" when the catalog has no entry (or is not loaded). */
+function idLookupName(id, kind) {
+  if (catalog.status !== "ok") return "";
+  const hit = kind === "category" ? catalog.catById.get(id) : catalog.itemById.get(id);
+  if (!hit) return "";
+  return kind === "category" ? pickCatName(hit) : pickName(hit);
+}
+
+/**
+ * Name line under/over an id: the localized name (plus a badge for modded items), or a plain
+ * "unknown ID" when the catalog is loaded and has no such entry. Empty until the catalog is ready,
+ * so the form never waits on the fetch.
+ */
+function idNameHtml(id, kind) {
+  const v = String(id ?? "").trim();
+  if (!v || catalog.status !== "ok") return "";
+  const hit = kind === "category" ? catalog.catById.get(v) : catalog.itemById.get(v);
+  if (!hit) {
+    return `<span class="id-unknown" title="${escapeHtml(t("idname.unknownHint"))}">${escapeHtml(t("idname.unknown"))}</span>`;
+  }
+  const name = kind === "category" ? pickCatName(hit) : pickName(hit);
+  const badge = kind === "item" && hit.src !== "0" ? pickSourceBadge(hit) : "";
+  return `<span class="id-name-text">${escapeHtml(name)}</span>${badge}`;
+}
+
+/** An id input with its name line above it. */
+function idCell(inputHtml, kind, value) {
+  return `<div class="id-cell"><div class="id-name" data-idname data-kind="${kind}">${idNameHtml(value, kind)}</div>${inputHtml}</div>`;
+}
+
+function idNameValue(el) {
+  const input = el.closest(".id-cell")?.querySelector("input");
+  return input ? input.value : el.getAttribute("data-idval") || "";
+}
+
+function fillIdName(el) {
+  el.innerHTML = idNameHtml(idNameValue(el), el.getAttribute("data-kind"));
+}
+
+/** Fill in names on the current page once the catalog is ready, without re-rendering anything. */
+function refreshIdNameFor(input) {
+  const name = input.closest(".id-cell")?.querySelector("[data-idname]");
+  if (name) fillIdName(name);
+}
+
+function refreshIdNames() {
+  root?.querySelectorAll("[data-idname]").forEach(fillIdName);
+  root?.querySelectorAll("[data-idtitle]").forEach((el) => {
+    const name = idLookupName(el.getAttribute("data-idval") || "", el.getAttribute("data-idtitle"));
+    if (name) el.textContent = truncate(name, 48);
+  });
+}
+
+/** Config sections that hold TPL or category ids; only these trigger the catalog fetch. */
+const ID_SECTIONS = new Set(["pool", "pricing", "events", "trends", "levels"]);
+
+/** Sections with id fields call this: one fetch per page session, shared with the picker. */
+async function ensureIdNames() {
+  await loadCatalog();
+  if (catalog.status === "ok") refreshIdNames();
+}
+
+/** The "pick" button next to a manual input; disabled once the server is known to lack the catalog. */
+function pickBtn(schemaPath, pathAttr, mode) {
+  const kind = PICKERS[schemaPath];
+  if (!kind) return "";
+  const off = catalog.status === "absent";
+  const title = escapeHtml(off ? t("picker.absent") : t("picker.pickTitle"));
+  const attrs = `data-act="pick" data-path="${pathAttr}" data-kind="${kind}" data-mode="${mode}"`
+    + ` data-schema="${escapeHtml(schemaPath)}" title="${title}" ${off ? "disabled" : ""}`;
+  if (mode === "field") {
+    return `<button type="button" class="x-btn" ${attrs} aria-label="${escapeHtml(t("picker.pick"))}">${icon("search", 14)}</button>`;
+  }
+  return `<button type="button" class="btn" ${attrs}>${icon("search", 14)}${escapeHtml(t("picker.pick"))}</button>`;
+}
+
+function pickName(it) {
+  return (lang === "ru" ? it.ru || it.en : it.en || it.ru) || it.id;
+}
+
+function pickAlt(it) {
+  const alt = lang === "ru" ? it.en : it.ru;
+  return alt && alt !== pickName(it) ? alt : "";
+}
+
+function pickCatName(c) {
+  return (lang === "ru" ? c.nameRu || c.name : c.name || c.nameRu) || c.id;
+}
+
+function pickInitials(text) {
+  const words = String(text || "").split(/[\s\-_./]+/).filter(Boolean);
+  const chars = words.length >= 2
+    ? [Array.from(words[0])[0], Array.from(words[1])[0]]
+    : Array.from(words[0] || "?").slice(0, 2);
+  return chars.join("").toUpperCase();
+}
+
+function pickSourceBadge(it) {
+  if (it.src === "0") return `<span class="src-v">${escapeHtml(t("picker.vanilla"))}</span>`;
+  const s = catalog.sources.get(it.src);
+  // Not vanilla, but the mod could not be determined: dashed and quiet, so it reads as "unknown"
+  // rather than as a mod name or as vanilla.
+  if (!s) {
+    return `<span class="src-badge unk" title="${escapeHtml(t("picker.unknownSourceHint"))}">${escapeHtml(t("picker.unknownSource"))}</span>`;
+  }
+  const name = s.name || `#${it.src}`;
+  const tip = [s.name, s.author && `(${s.author})`, s.guid].filter(Boolean).join(" ");
+  return `<span class="src-badge m${pickHash(it.src, 4)}" title="${escapeHtml(tip)}">${escapeHtml(truncate(name, 22))}</span>`;
+}
+
+function pickRow(it, i) {
+  const isItem = picker.kind === "item";
+  const cat = isItem ? catalog.catById.get(it.cat) : it;
+  const name = isItem ? pickName(it) : pickCatName(it);
+  const alt = isItem ? pickAlt(it) : (lang === "ru" ? it.name : it.nameRu);
+  const short = isItem ? (lang === "ru" ? it.sr || it.se : it.se || it.sr) : name;
+  const multi = picker.mode === "list";
+  const sel = picker.selected.has(it.id);
+  const have = picker.have.has(it.id);
+  const glyph = cat?.icon;
+  // Never request the icon route for an item without `ic`: that would be thousands of 404s.
+  const real = isItem && it.ic ? pickSafeIcon(`${API}/items/${encodeURIComponent(it.id)}/icon`) : null;
+
+  const cls = ["pick-row", i === picker.active ? "is-active" : "", sel ? "is-sel" : "", have ? "is-have" : ""].filter(Boolean).join(" ");
+  return `<div class="${cls}" id="pick-opt-${i}" role="option" aria-selected="${sel}" data-pick-i="${i}">
+    ${multi ? `<span class="pick-check" aria-hidden="true">${sel ? icon("check", 12) : ""}</span>` : ""}
+    <span class="ico ph-${pickHash(cat?.id || it.id, 5)}" aria-hidden="true"><span>${escapeHtml(pickInitials(short || name))}</span>${
+      glyph ? `<img src="${escapeHtml(glyph)}" alt="" loading="lazy" decoding="async" />` : ""}${
+      real ? `<img class="real" src="${escapeHtml(real)}" alt="" loading="lazy" decoding="async" />` : ""}</span>
+    <span class="pick-main">
+      <span class="pick-name">${escapeHtml(name)}${have ? ` <span class="pill">${escapeHtml(t("picker.have"))}</span>` : ""}</span>
+      <span class="pick-sub"><span class="mono">${escapeHtml(it.id)}</span>${alt ? ` ${escapeHtml(alt)}` : ""}</span>
+    </span>
+    ${isItem ? `<span class="pick-meta">${pickSourceBadge(it)}</span>` : ""}
+  </div>`;
+}
+
+function pickerToolsHtml() {
+  const q = escapeHtml(t("picker.search"));
+  let filters = "";
+  if (picker.kind === "item") {
+    const srcOpts = [{ value: "all", label: t("picker.allSources") }, { value: "0", label: t("picker.vanilla") }, { value: "-1", label: t("picker.unknownSource") },
+      ...[...catalog.sources.values()].map((s) => ({ value: String(s.id), label: s.name || String(s.id) }))];
+    const catOpts = [{ value: "all", label: t("picker.allCategories") },
+      ...[...catalog.cats].sort((a, b) => pickCatName(a).localeCompare(pickCatName(b), lang))
+        .map((c) => ({ value: c.id, label: pickCatName(c) }))];
+    filters = dropdownHtml({ value: picker.src, options: srcOpts, attrs: "data-picker-src", label: t("picker.source") })
+      + dropdownHtml({ value: picker.cat, options: catOpts, attrs: "data-picker-cat", label: t("picker.category") });
+  }
+  return `<div class="picker-tools">
+    <input type="search" class="search" data-picker-q placeholder="${q}" aria-label="${q}" role="combobox"
+           aria-controls="pick-list" aria-expanded="true" autocomplete="off" spellcheck="false" />
+    ${filters}
+  </div>`;
+}
+
+function paintPicker() {
+  const host = ensurePickerHost();
+  if (!picker) { host.innerHTML = ""; return; }
+
+  const title = escapeHtml(t(picker.kind === "item" ? "picker.titleItem" : "picker.titleCategory"));
+  let inner;
+  if (catalog.status === "ok") {
+    inner = `${pickerToolsHtml()}
+      <div class="overlay-body picker-body" id="pick-list" data-picker-list role="listbox"
+           ${picker.mode === "list" ? 'aria-multiselectable="true"' : ""}></div>
+      <div class="picker-foot" data-picker-foot></div>`;
+  } else if (catalog.status === "absent") {
+    inner = `<div class="overlay-body"><div class="empty"><strong>${escapeHtml(t("picker.absent"))}</strong><span>${escapeHtml(t("picker.absentHint"))}</span></div></div>`;
+  } else if (catalog.status === "error") {
+    inner = `<div class="overlay-body"><div class="err-box">${escapeHtml(catalog.error)}</div></div>`;
+  } else {
+    inner = `<div class="overlay-body"><p class="note tight">${escapeHtml(t("picker.loading"))}</p></div>`;
+  }
+
+  host.innerHTML = `<div class="overlay" data-picker-backdrop>
+    <div class="overlay-panel picker" role="dialog" aria-modal="true" aria-label="${title}">
+      <div class="overlay-head">
+        <h2 class="card-title">${title}</h2>
+        <button type="button" class="btn icon ghost" data-pick-act="close"
+                aria-label="${escapeHtml(t("act.dismiss"))}" title="${escapeHtml(t("act.dismiss"))}">${icon("close", 14)}</button>
+      </div>
+      ${inner}
+    </div>
+  </div>`;
+}
+
+function runPickerSearch() {
+  if (!picker) return;
+  // Every word must match somewhere in the haystack, in any order.
+  const words = pickNorm(picker.query).split(/\s+/).filter(Boolean);
+  const isItem = picker.kind === "item";
+  const out = [];
+  for (const it of isItem ? catalog.items : catalog.cats) {
+    if (isItem) {
+      if (picker.src !== "all" && it.src !== picker.src) continue;
+      if (picker.cat !== "all" && it.cat !== picker.cat) continue;
+    }
+    let ok = true;
+    for (const w of words) {
+      if (!it.hay.includes(w)) { ok = false; break; }
+    }
+    if (ok) out.push(it);
+  }
+  picker.matches = out;
+  picker.active = 0;
+  renderPickerList();
+  renderPickerFoot();
+}
+
+/** Only the first PICK_MAX matches are in the DOM; the footer says how many more there are. */
+function renderPickerList(keepScroll = false) {
+  const list = pickerHost?.querySelector("[data-picker-list]");
+  if (!list || !picker) return;
+  const top = list.scrollTop;
+  const shown = picker.matches.slice(0, PICK_MAX);
+  list.innerHTML = shown.length
+    ? shown.map(pickRow).join("")
+    : `<div class="empty">${escapeHtml(t("picker.noMatches"))}</div>`;
+  list.scrollTop = keepScroll ? top : 0;
+  pickerHost.querySelector("[data-picker-q]")?.setAttribute("aria-activedescendant", shown.length ? `pick-opt-${picker.active}` : "");
+}
+
+function renderPickerFoot() {
+  const foot = pickerHost?.querySelector("[data-picker-foot]");
+  if (!foot || !picker) return;
+  const n = picker.matches.length;
+  const count = n > PICK_MAX ? tp("picker.capped", { shown: PICK_MAX, n }) : tp("picker.count", { n });
+  const multi = picker.mode === "list";
+  foot.innerHTML = `<div class="picker-foot-text"><span>${escapeHtml(count)}</span><span class="picker-hint">${escapeHtml(t("picker.keys"))}</span>${
+    picker.kind === "item" ? `<span class="picker-hint">${escapeHtml(t("picker.iconNote"))}</span>` : ""}</div>${
+    multi ? `<div class="picker-foot-act"><span class="card-sub">${escapeHtml(tp("picker.selected", { n: picker.selected.size }))}</span>
+      <button type="button" class="btn primary" data-pick-act="insert" ${picker.selected.size ? "" : "disabled"}>${escapeHtml(t("picker.insert"))}</button></div>` : ""}`;
+}
+
+function movePickerActive(delta) {
+  const list = pickerHost?.querySelector("[data-picker-list]");
+  const n = Math.min(picker?.matches.length || 0, PICK_MAX);
+  if (!list || !n) return;
+  picker.active = (picker.active + delta + n) % n;
+  list.querySelector(".pick-row.is-active")?.classList.remove("is-active");
+  const row = list.children[picker.active];
+  row?.classList.add("is-active");
+  row?.scrollIntoView({ block: "nearest" });
+  pickerHost.querySelector("[data-picker-q]")?.setAttribute("aria-activedescendant", `pick-opt-${picker.active}`);
+}
+
+function activatePickerRow(i) {
+  const it = picker?.matches[i];
+  if (!it) return;
+  if (picker.mode !== "list") { commitPick([it.id]); return; }
+  if (picker.selected.has(it.id)) picker.selected.delete(it.id);
+  else picker.selected.add(it.id);
+  picker.active = i;
+  renderPickerList(true);
+  renderPickerFoot();
+}
+
+function insertPicked() {
+  if (picker && picker.selected.size) commitPick([...picker.selected]);
+}
+
+function closePicker() {
+  if (!picker) return;
+  picker = null;
+  window.clearTimeout(pickerDebounce);
+  paintPicker();
+}
+
+/** Write the picked ids into the draft, the same way the manual Add buttons do. */
+function commitPick(ids) {
+  const s = picker;
+  if (!s || !cfg || cfg.name !== s.cfgName || !ids.length) { closePicker(); return; }
+  const target = getAt(cfg.draft, s.parts);
+  let focusId = null;
+
+  if (s.mode === "list" && Array.isArray(target)) {
+    const fresh = ids.filter((id) => !target.includes(id));
+    target.push(...fresh);
+    toast(fresh.length === ids.length
+      ? tp("picker.added", { n: fresh.length })
+      : tp("picker.addedSkipped", { n: fresh.length, skipped: ids.length - fresh.length }), "ok");
+  } else if (s.mode === "map" && isPlainObject(target)) {
+    focusId = ids[0];
+    if (!(focusId in target)) target[focusId] = PICK_MAP_DEFAULTS[s.schema] ?? 0;
+  } else if (s.mode === "field") {
+    setAt(cfg.draft, s.parts, ids[0]);
+  }
+
+  closePicker();
+  rerenderCfgBody();
+  syncDirty();
+
+  if (focusId != null) {
+    const row = [...(root?.querySelectorAll("[data-map-row]") || [])].find((r) => r.getAttribute("data-map-row") === focusId);
+    const input = row?.querySelector('[data-map-field="value"]');
+    input?.focus();
+    input?.select?.();
+  }
+}
+
+async function openPicker(btn) {
+  const parts = (btn.getAttribute("data-path") || "").split("/").filter(Boolean);
+  const seq = ++pickerSeq;
+  const target = cfg ? getAt(cfg.draft, parts) : null;
+  const have = Array.isArray(target) ? target.map(String)
+    : isPlainObject(target) ? Object.keys(target)
+    : typeof target === "string" && target ? [target] : [];
+
+  picker = {
+    seq, parts, cfgName: cfg?.name,
+    kind: btn.getAttribute("data-kind") === "category" ? "category" : "item",
+    mode: btn.getAttribute("data-mode") || "list",
+    schema: btn.getAttribute("data-schema") || "",
+    query: "", src: "all", cat: "all",
+    selected: new Set(), have: new Set(have), matches: [], active: 0,
+  };
+  paintPicker();
+
+  await loadCatalog();
+  if (!picker || picker.seq !== seq) return;
+  paintPicker();
+  if (catalog.status === "absent") {
+    // Remember it so the buttons in the form stay disabled with a calm note.
+    rerenderCfgBody();
+    return;
+  }
+  if (catalog.status === "ok") {
+    runPickerSearch();
+    pickerHost?.querySelector("[data-picker-q]")?.focus();
+  }
+}
+
+function ensurePickerHost() {
+  if (!pickerHost || !root?.contains(pickerHost)) {
+    pickerHost = document.createElement("div");
+    pickerHost.setAttribute("data-picker-host", "");
+    root?.appendChild(pickerHost);
+  }
+  bindPicker(pickerHost);
+  return pickerHost;
+}
+
+function bindPicker(host) {
+  if (!pickerKeysBound) {
+    pickerKeysBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && picker) closePicker();
+    });
+  }
+  if (pickerBound.has(host)) return;
+  pickerBound.add(host);
+
+  host.addEventListener("click", (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target) return;
+    if (target.hasAttribute("data-picker-backdrop")) { closePicker(); return; }
+    const act = target.closest("[data-pick-act]");
+    if (act) {
+      if (act.getAttribute("data-pick-act") === "close") closePicker();
+      else if (act.getAttribute("data-pick-act") === "insert") insertPicked();
+      return;
+    }
+    const row = target.closest("[data-pick-i]");
+    if (row) activatePickerRow(Number(row.getAttribute("data-pick-i")));
+  });
+
+  host.addEventListener("input", (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLElement) || !el.hasAttribute("data-picker-q") || !picker) return;
+    picker.query = el.value;
+    window.clearTimeout(pickerDebounce);
+    pickerDebounce = window.setTimeout(runPickerSearch, PICK_DEBOUNCE_MS);
+  });
+
+  host.addEventListener("change", (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLElement) || !picker) return;
+    if (el.hasAttribute("data-picker-src")) picker.src = el.value;
+    else if (el.hasAttribute("data-picker-cat")) picker.cat = el.value;
+    else return;
+    runPickerSearch();
+  });
+
+  host.addEventListener("keydown", (e) => {
+    if (!picker || catalog.status !== "ok") return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      movePickerActive(e.key === "ArrowDown" ? 1 : -1);
+    } else if (e.key === "Enter") {
+      const target = e.target instanceof Element ? e.target : null;
+      if (target?.closest("button, select")) return;
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) insertPicked();
+      else activatePickerRow(picker.active);
+    }
+  });
+
+  // Image errors do not bubble, so listen in the capture phase. Layers stack real icon, then
+  // category glyph, then initials, so dropping a broken image reveals the next level down.
+  host.addEventListener("error", (e) => {
+    if (e.target instanceof HTMLImageElement) e.target.remove();
+  }, true);
 }
 
 /* =========================================================================
@@ -2802,6 +3678,10 @@ function navHtml(section) {
 
 function render() {
   if (!root) return;
+  closeDropdown();
+  // The picker host lives inside root and is wiped with it.
+  picker = null;
+  pickerHost = null;
   const section = currentSection();
   const dotClass = brand.enabled == null ? "" : brand.enabled ? "is-on" : "is-off";
   const dotLabel = brand.enabled == null ? "" : brand.enabled ? t("enabled") : t("disabled");
@@ -2820,6 +3700,10 @@ function render() {
           </span>
         </div>
         <nav aria-label="${escapeHtml(t("brandSub"))}">${navHtml(section)}</nav>
+        <div class="side-links" role="group" aria-label="${escapeHtml(t("links.label"))}">
+          ${SIDE_LINKS.map((l) => `<a class="side-link" href="${escapeHtml(l.href)}" target="_blank" rel="noopener noreferrer"
+            title="${escapeHtml(t(`links.${l.id}Tip`))}" aria-label="${escapeHtml(t(`links.${l.id}Tip`))}">${icon(l.icon)}<span>${escapeHtml(l.label)}</span></a>`).join("")}
+        </div>
       </aside>
       <main class="main">
         <header class="top">
@@ -2995,6 +3879,10 @@ async function loadSection(opts = {}) {
       statePage = 0;
       body.innerHTML = renderStateSection();
       bindStateSection(body);
+      void loadCatalog().then(() => {
+        // Repaint once with names, unless the user has already moved on.
+        if (token === loadToken && catalog.status === "ok") body.innerHTML = renderStateSection();
+      });
       return;
     }
 
@@ -3035,11 +3923,12 @@ async function loadSection(opts = {}) {
     </div>`;
 
     bindCfgSection(body, section);
+    if (!isSelling && ID_SECTIONS.has(name)) void ensureIdNames();
   } catch (e) {
     if (token !== loadToken) return;
-    const msg = e instanceof Error ? e.message : String(e);
-    body.innerHTML = `<div class="err-box">${escapeHtml(t("toast.loadFailed"))}: ${escapeHtml(msg)}</div>`;
-    toast(`${t("toast.loadFailed")}: ${msg}`, "err");
+    const msg = failText(e, t("toast.loadFailed"));
+    body.innerHTML = `<div class="err-box">${escapeHtml(msg)}</div>`;
+    toast(msg, "err");
   } finally {
     if (token === loadToken) setBusy(false);
   }
@@ -3061,6 +3950,7 @@ export function mount(rootId) {
   document.documentElement.lang = lang;
   applyTheme();
   ensureTooltip();
+  bindDropdowns();
   window.addEventListener("beforeunload", onBeforeUnload);
   render();
   void loadSection();

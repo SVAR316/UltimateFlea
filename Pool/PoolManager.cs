@@ -29,9 +29,21 @@ public class PoolManager(
 
         var whitelistMode = string.Equals(poolConfig.Mode, "whitelist", StringComparison.OrdinalIgnoreCase);
 
+        if (whitelistMode && addCats.Count == 0)
+        {
+            logger.Warning(
+                "[UltimateFlea] Pool: whitelist mode with an empty addCategories removes every item from the flea " +
+                "except the explicit 'add' list. Fill addCategories or set mode to 'blacklist'.");
+        }
+
         var enabled = 0;
         var disabled = 0;
         var toUnblacklist = new List<MongoId>();
+
+        // Rebuild the ragfair custom blacklist through a set: calling Remove/Add per item over the
+        // whole item DB is O(n^2) while Custom is a list.
+        var customBlacklist = ragfairConfig.Dynamic.Blacklist.Custom;
+        var custom = customBlacklist.ToHashSet();
 
         foreach (var (tpl, item) in items)
         {
@@ -49,16 +61,22 @@ public class PoolManager(
             if (decision.Value)
             {
                 item.Properties.CanSellOnRagfair = true;
-                ragfairConfig.Dynamic.Blacklist.Custom.Remove(tpl);
+                custom.Remove(tpl);
                 toUnblacklist.Add(tpl);
                 enabled++;
             }
             else
             {
                 item.Properties.CanSellOnRagfair = false;
-                ragfairConfig.Dynamic.Blacklist.Custom.Add(tpl);
+                custom.Add(tpl);
                 disabled++;
             }
+        }
+
+        customBlacklist.Clear();
+        foreach (var tpl in custom)
+        {
+            customBlacklist.Add(tpl);
         }
 
         var clearedItemBlacklist = itemBlacklistCleaner.Unblacklist(toUnblacklist);
@@ -72,6 +90,21 @@ public class PoolManager(
         if (missing.Count > 0)
         {
             logger.Warning($"[UltimateFlea] Pool: {missing.Count} TPL(s) not found in item DB yet: {string.Join(", ", missing)}");
+        }
+
+        // A mistyped category id used to be silently ignored - warn for it like we do for TPLs.
+        var knownParents = items.Values.Select(item => item.Parent).ToHashSet();
+
+        var missingCats = addCats.Concat(removeCats)
+            .Where(id => !knownParents.Contains(id))
+            .Select(id => id.ToString())
+            .Distinct()
+            .ToList();
+
+        if (missingCats.Count > 0)
+        {
+            logger.Warning(
+                $"[UltimateFlea] Pool: {missingCats.Count} category ID(s) match no item in the DB: {string.Join(", ", missingCats)}");
         }
 
         logger.Success(
@@ -97,7 +130,7 @@ public class PoolManager(
 
         if (whitelistMode)
         {
-            return catAdd ? true : false;
+            return catAdd;
         }
 
         if (catRemove) return false;

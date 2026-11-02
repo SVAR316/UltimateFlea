@@ -1,4 +1,5 @@
 using System.Reflection;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Controllers;
@@ -17,8 +18,11 @@ using UltimateFlea.LevelLocks;
 
 namespace UltimateFlea.Patches;
 
+// The buy guard lives in ConfirmRagfairTradingPatch (Patches/TradeHooks.cs): that method is also
+// hooked for demand tracking, and a single patch class is the only way to order the two reliably.
 [Injectable(TypePriority = OnLoadOrder.Preload)]
 public class LevelLockPatchesLoad(
+    ISptLogger<LevelLockPatchesLoad> logger,
     LevelLockService levelLocks,
     RagfairOfferService ragfairOfferService,
     HttpResponseUtil httpResponseUtil,
@@ -26,26 +30,29 @@ public class LevelLockPatchesLoad(
 {
     public Task OnLoadAsync(CancellationToken cancellationToken)
     {
-        LevelLockGate.Bind(levelLocks, ragfairOfferService, httpResponseUtil, eventOutputHolder);
+        LevelLockGate.Bind(logger, levelLocks, ragfairOfferService, httpResponseUtil, eventOutputHolder);
         new LevelLockSellPatch().Enable();
-        new LevelLockBuyPatch().Enable();
         return Task.CompletedTask;
     }
 }
 
 internal static class LevelLockGate
 {
+    private static ISptLogger<LevelLockPatchesLoad>? _logger;
     private static LevelLockService? _levelLocks;
     private static RagfairOfferService? _offers;
     private static HttpResponseUtil? _http;
     private static EventOutputHolder? _output;
+    private static int _unboundWarned;
 
     public static void Bind(
+        ISptLogger<LevelLockPatchesLoad> logger,
         LevelLockService levelLocks,
         RagfairOfferService offers,
         HttpResponseUtil http,
         EventOutputHolder output)
     {
+        _logger = logger;
         _levelLocks = levelLocks;
         _offers = offers;
         _http = http;
@@ -59,11 +66,17 @@ internal static class LevelLockGate
             return null;
         }
 
+        // One index per request instead of a linear scan of the whole stash per requested item.
+        // GroupBy keeps the first entry for an id, which is what FirstOrDefault used to return.
+        var stashById = pmcData.Inventory.Items
+            .GroupBy(i => $"{i.Id}")
+            .ToDictionary(g => g.Key, g => g.First());
+
         var level = pmcData.Info?.Level ?? 0;
         foreach (var itemId in request.Items)
         {
-            var item = pmcData.Inventory.Items.FirstOrDefault(i => i.Id == itemId);
-            if (item is not null && _levelLocks.IsLocked(item.Template, level, out var required))
+            if (stashById.TryGetValue($"{itemId}", out var item)
+                && _levelLocks.IsLocked(item.Template, level, out var required))
             {
                 return required;
             }
@@ -103,10 +116,45 @@ internal static class LevelLockGate
         return null;
     }
 
-    public static ItemEventRouterResponse Fail(MongoId sessionID, int requiredLevel)
+    // Shared prefix body for both guards: true = let the original controller method run.
+    public static bool Allow(int? requiredLevel, MongoId sessionID, ref ItemEventRouterResponse result)
     {
-        var output = _output!.GetOutput(sessionID);
-        return _http!.AppendErrorToOutput(output, LevelLockService.LockedMessage(requiredLevel), BackendErrorCodes.RagfairUnavailable);
+        var blocked = Fail(requiredLevel, sessionID);
+        if (blocked is null)
+        {
+            return true;
+        }
+
+        result = blocked;
+        return false;
+    }
+
+    // Returns null when nothing is locked, or when our statics are not bound yet: an NRE inside a
+    // Harmony prefix would take down the whole trade endpoint, so an unbound gate allows the trade.
+    public static ItemEventRouterResponse? Fail(int? requiredLevel, MongoId sessionID)
+    {
+        if (requiredLevel is null)
+        {
+            return null;
+        }
+
+        var output = _output;
+        var http = _http;
+        if (output is null || http is null)
+        {
+            if (Interlocked.Exchange(ref _unboundWarned, 1) == 0)
+            {
+                _logger?.Warning(
+                    "[UltimateFlea] Level lock gate is not bound (no output/response util); flea trades are allowed through.");
+            }
+
+            return null;
+        }
+
+        return http.AppendErrorToOutput(
+            output.GetOutput(sessionID),
+            LevelLockService.LockedMessage(requiredLevel.Value),
+            BackendErrorCodes.RagfairUnavailable);
     }
 }
 
@@ -122,36 +170,6 @@ public class LevelLockSellPatch : AbstractPatch
     [PatchPrefix]
     public static bool Prefix(PmcData pmcData, AddOfferRequestData offerRequest, MongoId sessionID, ref ItemEventRouterResponse __result)
     {
-        var required = LevelLockGate.CheckSell(pmcData, offerRequest);
-        if (required is null)
-        {
-            return true;
-        }
-
-        __result = LevelLockGate.Fail(sessionID, required.Value);
-        return false;
-    }
-}
-
-public class LevelLockBuyPatch : AbstractPatch
-{
-    protected override MethodBase GetTargetMethod()
-    {
-        return typeof(TradeController).GetMethod(
-            nameof(TradeController.ConfirmRagfairTrading),
-            BindingFlags.Instance | BindingFlags.Public)!;
-    }
-
-    [PatchPrefix]
-    public static bool Prefix(PmcData pmcData, ProcessRagfairTradeRequestData request, MongoId sessionID, ref ItemEventRouterResponse __result)
-    {
-        var required = LevelLockGate.CheckBuy(pmcData, request);
-        if (required is null)
-        {
-            return true;
-        }
-
-        __result = LevelLockGate.Fail(sessionID, required.Value);
-        return false;
+        return LevelLockGate.Allow(LevelLockGate.CheckSell(pmcData, offerRequest), sessionID, ref __result);
     }
 }

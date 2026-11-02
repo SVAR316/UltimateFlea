@@ -22,8 +22,15 @@ public class LevelLockService(
     public const string LockedLocaleKey = "ultimateflea/LevelLocked{0}";
     public const string ShortLocaleKey = "ultimateflea/LevelShort{0}";
 
-    private Dictionary<MongoId, int> _levels = new();
-    private Dictionary<MongoId, int> _categoryLevels = new();
+    // One definition for the locked sentence: the locale entry and the server-side error reuse it.
+    private const string LockedTemplateEn = "Trading items of this type will be available from level {0}";
+    private const string LockedTemplateRu = "Торговля предметами данного типа будет доступна с {0} уровня";
+    private const string ShortTemplateEn = "LVL {0}";
+    private const string ShortTemplateRu = "{0} ур.";
+
+    // Lock tables are rebuilt from a web request while patches read them, so they are never mutated
+    // in place: a fresh immutable snapshot is published with a single atomic reference swap.
+    private LockTables _tables = LockTables.Empty;
 
     public bool Enabled => configManager.Mod.Enabled && configManager.Levels.Enabled;
     public bool LockBuying => Enabled && configManager.Levels.LockBuying;
@@ -39,10 +46,8 @@ public class LevelLockService(
         foreach (var (language, locale) in locales.Global)
         {
             var ru = language.StartsWith("ru", StringComparison.OrdinalIgnoreCase);
-            var locked = ru
-                ? "Торговля предметами данного типа будет доступна с {0} уровня"
-                : "Trading items of this type will be available from level {0}";
-            var shortLabel = ru ? "{0} ур." : "LVL {0}";
+            var locked = ru ? LockedTemplateRu : LockedTemplateEn;
+            var shortLabel = ru ? ShortTemplateRu : ShortTemplateEn;
 
             locale.AddTransformer(dict =>
             {
@@ -59,11 +64,9 @@ public class LevelLockService(
 
     public void Apply()
     {
-        _levels = new Dictionary<MongoId, int>();
-        _categoryLevels = new Dictionary<MongoId, int>();
-
         if (!Enabled)
         {
+            Volatile.Write(ref _tables, LockTables.Empty);
             return;
         }
 
@@ -89,27 +92,34 @@ public class LevelLockService(
         tiered.AmmoTplUnlocks = ammo;
         tiered.Enabled = cfg.LockBuying;
 
-        foreach (var tpl in templates.Items.Keys)
+        var levels = new Dictionary<MongoId, int>();
+        var parentCache = new Dictionary<MongoId, ParentResolution>();
+
+        foreach (var (tpl, template) in templates.Items)
         {
-            var level = Resolve(tpl, items, types, ammo);
+            var level = Resolve(tpl, template.Parent, items, types, ammo, parentCache);
             if (level > 0)
             {
-                _levels[tpl] = level;
+                levels[tpl] = level;
             }
         }
 
-        BuildCategoryLevels();
+        var categoryLevels = BuildCategoryLevels(levels);
+
+        // Single publish point: readers either see the old snapshot or the complete new one.
+        Volatile.Write(ref _tables, new LockTables(levels, categoryLevels));
 
         logger.Success(
-            $"[UltimateFlea] Level locks applied: {_levels.Count} items, {_categoryLevels.Count} handbook categories locked " +
+            $"[UltimateFlea] Level locks applied: {levels.Count} items, {categoryLevels.Count} handbook categories locked " +
             $"(buy={cfg.LockBuying}, sell={cfg.LockSelling}).");
     }
 
     // A handbook category is locked only when every flea-sellable item inside it is locked; shows the lowest level.
-    private void BuildCategoryLevels()
+    private Dictionary<MongoId, int> BuildCategoryLevels(Dictionary<MongoId, int> levels)
     {
         var handbook = templates.Handbook;
         var parents = handbook.Categories.ToDictionary(c => c.Id, c => c.ParentId);
+        var chains = new Dictionary<MongoId, List<MongoId>>();
         var lowest = new Dictionary<MongoId, int>();
         var open = new HashSet<MongoId>();
 
@@ -120,11 +130,16 @@ public class LevelLockService(
                 continue;
             }
 
-            var level = GetRequiredLevel(entry.Id);
+            var level = levels.GetValueOrDefault(entry.Id);
             MongoId? category = entry.ParentId;
-            for (var depth = 0; category is not null && depth < 32; depth++)
+            if (category is null)
             {
-                var id = category.Value;
+                continue;
+            }
+
+            // Each category chain is walked once and reused by every item inside it.
+            foreach (var id in GetChain(category.Value))
+            {
                 if (level <= 0)
                 {
                     open.Add(id);
@@ -133,19 +148,38 @@ public class LevelLockService(
                 {
                     lowest[id] = lowest.TryGetValue(id, out var current) ? Math.Min(current, level) : level;
                 }
-
-                category = parents.GetValueOrDefault(id);
             }
         }
 
-        _categoryLevels = lowest
+        return lowest
             .Where(x => !open.Contains(x.Key))
             .ToDictionary(x => x.Key, x => x.Value);
+
+        // Same walk as before (including the 32 level depth guard), memoised per starting category.
+        List<MongoId> GetChain(MongoId start)
+        {
+            if (chains.TryGetValue(start, out var cached))
+            {
+                return cached;
+            }
+
+            var chain = new List<MongoId>();
+            MongoId? current = start;
+            for (var depth = 0; current is not null && depth < 32; depth++)
+            {
+                var id = current.Value;
+                chain.Add(id);
+                current = parents.GetValueOrDefault(id);
+            }
+
+            chains[start] = chain;
+            return chain;
+        }
     }
 
     public int GetRequiredLevel(MongoId tpl)
     {
-        return _levels.GetValueOrDefault(tpl);
+        return Volatile.Read(ref _tables).Levels.GetValueOrDefault(tpl);
     }
 
     public bool IsLocked(MongoId tpl, int playerLevel, out int requiredLevel)
@@ -156,29 +190,36 @@ public class LevelLockService(
 
     public LevelLocksRules GetRules()
     {
+        // One reference for the whole payload, so levels and categories always come from the same snapshot.
+        var tables = Volatile.Read(ref _tables);
+
         return new LevelLocksRules
         {
             Enabled = Enabled,
             LockBuying = LockBuying,
             LockSelling = LockSelling,
-            Levels = _levels.ToDictionary(x => x.Key.ToString(), x => x.Value),
-            Categories = _categoryLevels.ToDictionary(x => x.Key.ToString(), x => x.Value)
+            Levels = tables.Levels.ToDictionary(x => x.Key.ToString(), x => x.Value),
+            Categories = tables.Categories.ToDictionary(x => x.Key.ToString(), x => x.Value)
         };
     }
 
     public static string LockedMessage(int requiredLevel)
     {
-        return $"Trading items of this type will be available from level {requiredLevel}";
+        return string.Format(LockedTemplateEn, requiredLevel);
     }
 
     // Same priority as SPT tieredFlea: ammo tier -> exact item -> highest matching category.
     private int Resolve(
         MongoId tpl,
+        MongoId parent,
         Dictionary<MongoId, int> items,
         Dictionary<MongoId, int> types,
-        Dictionary<MongoId, int> ammo)
+        Dictionary<MongoId, int> ammo,
+        Dictionary<MongoId, ParentResolution> parentCache)
     {
-        if (ammo.Count > 0 && itemHelper.IsOfBaseclass(tpl, BaseClasses.AMMO) && ammo.TryGetValue(tpl, out var ammoLevel))
+        var resolution = GetParentResolution(tpl, parent, types, ammo.Count > 0, parentCache);
+
+        if (resolution.IsAmmo && ammo.TryGetValue(tpl, out var ammoLevel))
         {
             return ammoLevel;
         }
@@ -186,6 +227,26 @@ public class LevelLockService(
         if (items.TryGetValue(tpl, out var itemLevel))
         {
             return itemLevel;
+        }
+
+        return resolution.CategoryLevel;
+    }
+
+    // SPT's base class cache is keyed by item tpl and holds the ids of its parents only, so every item
+    // sharing a parent answers IsOfBaseclass identically -> test each parent once.
+    // An item whose own parent is not reported (node entries are not in that cache) is resolved
+    // directly and never cached, to keep the result bit-for-bit the same as the uncached version.
+    private ParentResolution GetParentResolution(
+        MongoId tpl,
+        MongoId parent,
+        Dictionary<MongoId, int> types,
+        bool checkAmmo,
+        Dictionary<MongoId, ParentResolution> cache)
+    {
+        var cacheable = !parent.IsEmpty && itemHelper.IsOfBaseclass(tpl, parent);
+        if (cacheable && cache.TryGetValue(parent, out var cached))
+        {
+            return cached;
         }
 
         var best = 0;
@@ -197,7 +258,16 @@ public class LevelLockService(
             }
         }
 
-        return best;
+        var resolution = new ParentResolution(
+            checkAmmo && itemHelper.IsOfBaseclass(tpl, BaseClasses.AMMO),
+            best);
+
+        if (cacheable)
+        {
+            cache[parent] = resolution;
+        }
+
+        return resolution;
     }
 
     private void Merge(Dictionary<MongoId, int> target, Dictionary<string, int> overrides, string section)
@@ -220,5 +290,17 @@ public class LevelLockService(
                 target[id] = level;
             }
         }
+    }
+
+    private readonly record struct ParentResolution(bool IsAmmo, int CategoryLevel);
+
+    // Immutable snapshot of both lock tables, swapped in as a single reference.
+    private sealed record LockTables(
+        IReadOnlyDictionary<MongoId, int> Levels,
+        IReadOnlyDictionary<MongoId, int> Categories)
+    {
+        public static readonly LockTables Empty = new(
+            new Dictionary<MongoId, int>(),
+            new Dictionary<MongoId, int>());
     }
 }

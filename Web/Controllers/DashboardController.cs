@@ -15,7 +15,8 @@ public class DashboardController(
     EconomyEngine economyEngine,
     PoolManager poolManager,
     LevelLockService levelLocks,
-    PresetService presets) : ControllerBase
+    PresetService presets,
+    ItemCatalogService itemCatalog) : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -66,6 +67,66 @@ public class DashboardController(
         return Ok(new { ok = true, restartRecommended });
     }
 
+    [HttpGet("items")]
+    public IActionResult Items()
+    {
+        var blob = itemCatalog.Get();
+
+        Response.Headers.ETag = blob.ETag;
+        Response.Headers.CacheControl = "private, max-age=0, must-revalidate";
+        Response.Headers.Vary = "Accept-Encoding";
+
+        if (Request.Headers.IfNoneMatch.Any(v => v is not null && v.Contains(blob.ETag, StringComparison.Ordinal)))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        // Pre-compressed once at build time; sending it ourselves does not depend on the host's
+        // response compression being configured.
+        var acceptsGzip = Request.Headers.AcceptEncoding.Any(v => v is not null && v.Contains("gzip", StringComparison.OrdinalIgnoreCase));
+        if (acceptsGzip)
+        {
+            Response.Headers.ContentEncoding = "gzip";
+            return File(blob.Gzip, "application/json");
+        }
+
+        return File(blob.Json, "application/json");
+    }
+
+    [HttpGet("items/{tpl}/icon")]
+    public IActionResult ItemIcon(string tpl)
+    {
+        if (!itemCatalog.TryGetIcon(tpl, out var path))
+        {
+            return NotFound();
+        }
+
+        FileInfo info;
+        try
+        {
+            info = new FileInfo(path);
+            if (!info.Exists)
+            {
+                return NotFound();
+            }
+        }
+        catch
+        {
+            return NotFound();
+        }
+
+        var etag = $"\"{info.Length:x}-{info.LastWriteTimeUtc.Ticks:x}\"";
+        Response.Headers.ETag = etag;
+        Response.Headers.CacheControl = "private, max-age=604800";
+
+        if (Request.Headers.IfNoneMatch.Any(v => v is not null && v.Contains(etag, StringComparison.Ordinal)))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        return PhysicalFile(path, "image/png");
+    }
+
     [HttpGet("presets")]
     public IActionResult ListPresets() =>
         new JsonResult(new PresetListResponse(presets.List()), JsonOptions);
@@ -76,7 +137,7 @@ public class DashboardController(
         var def = presets.Find(id);
         if (def is null)
         {
-            return NotFound(new { error = $"Unknown preset '{id}'" });
+            return NotFound(new { error = new LocalizedText($"Unknown preset '{id}'", $"Неизвестный пресет '{id}'") });
         }
 
         if (!presets.TryResolve(def, out var configs, out var error))
@@ -93,7 +154,7 @@ public class DashboardController(
         var def = presets.Find(id);
         if (def is null)
         {
-            return NotFound(new { error = $"Unknown preset '{id}'" });
+            return NotFound(new { error = new LocalizedText($"Unknown preset '{id}'", $"Неизвестный пресет '{id}'") });
         }
 
         var result = presets.Apply(def);
@@ -105,13 +166,13 @@ public class DashboardController(
         if (result.Applied.Contains("pool") && configManager.Mod.EnablePoolManager)
         {
             try { poolManager.Apply(); }
-            catch (Exception ex) { restart = true; warning = Join(warning, ex.Message); }
+            catch (Exception ex) { restart = true; warning = LocalizedText.Join(warning, Technical(ex.Message)); }
         }
 
         if (result.Applied.Contains("levels"))
         {
             try { levelLocks.Apply(); }
-            catch (Exception ex) { restart = true; warning = Join(warning, ex.Message); }
+            catch (Exception ex) { restart = true; warning = LocalizedText.Join(warning, Technical(ex.Message)); }
         }
 
         if (result.Error is not null)
@@ -128,8 +189,9 @@ public class DashboardController(
         return Ok(new { ok = true, applied = result.Applied, restartRecommended = restart, warning });
     }
 
-    private static string Join(string? first, string second) =>
-        string.IsNullOrEmpty(first) ? second : $"{first} {second}";
+    // The detail after the colon is the server's own exception text and is not translated.
+    private static LocalizedText Technical(string detail) =>
+        new($"A side effect failed: {detail}", $"Побочное действие не выполнено: {detail}");
 
     // Live in-memory state: reading data/economy_state.json here was stale by up to
     // one tick and could catch the file mid-write.

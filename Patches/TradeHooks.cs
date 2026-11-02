@@ -6,6 +6,7 @@ using SPTarkov.Server.Core.Controllers;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Helpers.Ragfair;
 using SPTarkov.Server.Core.Models.Common;
+using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.ItemEvent;
 using SPTarkov.Server.Core.Models.Eft.Ragfair;
 using SPTarkov.Server.Core.Models.Eft.Trade;
@@ -34,7 +35,8 @@ public class TradeHooksLoad(
 
 internal static class TradeHookHelper
 {
-    private static readonly AsyncLocal<List<MongoId>?> PendingBuys = new();
+    // Captured offers for the request currently being handled on this execution context.
+    private static readonly AsyncLocal<PendingBuy?> Pending = new();
 
     private static ConfigManager? _config;
     private static EconomyEngine? _engine;
@@ -52,14 +54,14 @@ internal static class TradeHookHelper
 
     public static void CaptureBuys(ProcessRagfairTradeRequestData? request)
     {
-        var tpls = new List<MongoId>();
-        PendingBuys.Value = tpls;
+        DiscardBuys();
 
         if (request?.Offers is null || request.Offers.Count == 0 || _offers is null)
         {
             return;
         }
 
+        var tpls = new List<MongoId>();
         foreach (var offerReq in request.Offers)
         {
             if (string.IsNullOrWhiteSpace(offerReq.Id) || !MongoId.IsValidMongoId(offerReq.Id))
@@ -74,19 +76,37 @@ internal static class TradeHookHelper
                 tpls.Add(tpl.Value);
             }
         }
+
+        Pending.Value = new PendingBuy(request, tpls);
     }
 
-    public static void CommitBuys(ItemEventRouterResponse? result)
+    // Called whenever the trade is not going to run (blocked by a guard), so nothing can be recorded.
+    public static void DiscardBuys()
     {
-        var tpls = PendingBuys.Value;
-        PendingBuys.Value = null;
+        Pending.Value = null;
+    }
 
-        if (tpls is null || tpls.Count == 0)
+    public static void CommitBuys(ProcessRagfairTradeRequestData? request, ItemEventRouterResponse? result)
+    {
+        var pending = Pending.Value;
+        DiscardBuys();
+
+        // No capture means the prefix never let the trade reach the controller: record nothing.
+        // This is the real gate - it does not depend on how a rejection is reported.
+        if (pending is null || pending.Tpls.Count == 0)
         {
             return;
         }
 
-        if (result?.Warnings is { Count: > 0 })
+        // The capture must belong to the request we are returning from, not to a leftover context.
+        if (!ReferenceEquals(pending.Request, request))
+        {
+            return;
+        }
+
+        // Evidence the controller actually produced an item event result; a trade it refused
+        // (not enough money, offer gone, ...) comes back with a warning attached.
+        if (result is null || result.Warnings is { Count: > 0 })
         {
             return;
         }
@@ -97,7 +117,7 @@ internal static class TradeHookHelper
             return;
         }
 
-        foreach (var tpl in tpls)
+        foreach (var tpl in pending.Tpls)
         {
             engine.RecordBuy(tpl);
         }
@@ -129,8 +149,14 @@ internal static class TradeHookHelper
 
         return _engine;
     }
+
+    private sealed record PendingBuy(ProcessRagfairTradeRequestData Request, List<MongoId> Tpls);
 }
 
+// ConfirmRagfairTrading is guarded by the level locks AND hooked for demand tracking. Both used to
+// live in separate patch classes, where Harmony gives no ordering guarantee between the prefixes -
+// the capture could run for a trade the level lock had already rejected. One class, one explicit
+// order: level lock decides first, and only an allowed trade is ever captured.
 public class ConfirmRagfairTradingPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
@@ -141,15 +167,24 @@ public class ConfirmRagfairTradingPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    public static void Prefix(ProcessRagfairTradeRequestData request)
+    public static bool Prefix(PmcData pmcData, ProcessRagfairTradeRequestData request, MongoId sessionID, ref ItemEventRouterResponse __result)
     {
+        // 1. Level lock. A blocked trade returns before anything is captured.
+        if (!LevelLockGate.Allow(LevelLockGate.CheckBuy(pmcData, request), sessionID, ref __result))
+        {
+            TradeHookHelper.DiscardBuys();
+            return false;
+        }
+
+        // 2. The trade is allowed to run: remember what is being bought for the postfix.
         TradeHookHelper.CaptureBuys(request);
+        return true;
     }
 
     [PatchPostfix]
-    public static void Postfix(ItemEventRouterResponse __result)
+    public static void Postfix(ProcessRagfairTradeRequestData request, ItemEventRouterResponse __result)
     {
-        TradeHookHelper.CommitBuys(__result);
+        TradeHookHelper.CommitBuys(request, __result);
     }
 }
 

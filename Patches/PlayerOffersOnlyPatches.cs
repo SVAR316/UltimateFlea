@@ -24,19 +24,19 @@ public class PlayerOffersOnlyPatchesLoad(ConfigManager configManager) : IOnLoad
     }
 }
 
+// Both patches stay separate, discoverable classes (Harmony needs that); only the target lookup
+// and the prefix body are shared through PlayerOffersOnlyGate.
 public class DisableDynamicOffersPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(RagfairOfferGenerator).GetMethod(
-            nameof(RagfairOfferGenerator.GenerateDynamicOffers),
-            BindingFlags.Instance | BindingFlags.Public)!;
+        return PlayerOffersOnlyGate.GeneratorMethod(nameof(RagfairOfferGenerator.GenerateDynamicOffers));
     }
 
     [PatchPrefix]
     public static bool Prefix()
     {
-        return !PlayerOffersOnlyGate.Enabled;
+        return PlayerOffersOnlyGate.AllowGeneration();
     }
 }
 
@@ -44,18 +44,15 @@ public class DisableTraderFleaOffersPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(RagfairOfferGenerator).GetMethod(
+        return PlayerOffersOnlyGate.GeneratorMethod(
             nameof(RagfairOfferGenerator.GenerateFleaOffersForTrader),
-            BindingFlags.Instance | BindingFlags.Public,
-            null,
-            [typeof(MongoId)],
-            null)!;
+            [typeof(MongoId)]);
     }
 
     [PatchPrefix]
     public static bool Prefix()
     {
-        return !PlayerOffersOnlyGate.Enabled;
+        return PlayerOffersOnlyGate.AllowGeneration();
     }
 }
 
@@ -66,4 +63,16 @@ internal static class PlayerOffersOnlyGate
     public static void Bind(ConfigManager configManager) => _config = configManager;
 
     public static bool Enabled => _config?.Mod.PlayerOffersOnly == true;
+
+    // Shared prefix body: skip generation only while player-offers-only mode is on.
+    public static bool AllowGeneration() => !Enabled;
+
+    public static MethodBase GeneratorMethod(string name, Type[]? parameterTypes = null)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
+
+        return parameterTypes is null
+            ? typeof(RagfairOfferGenerator).GetMethod(name, flags)!
+            : typeof(RagfairOfferGenerator).GetMethod(name, flags, null, parameterTypes, null)!;
+    }
 }
