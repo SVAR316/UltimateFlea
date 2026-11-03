@@ -7,12 +7,25 @@ Flea market mod for SPT 4.1. It lets you manage the item pool, set prices, and s
 - SPT ~4.1
 - .NET 10 SDK if you want to build it yourself
 
+## Web UI
+
+After the SPT server starts, open the dashboard in a browser (**https**, not http: SPT uses a self-signed cert, so accept the browser warning):
+
+- **https://127.0.0.1:6969/ultimateflea/app.html**
+- Fallback: `https://127.0.0.1:6969/ultimateflea` (Blazor host → same UI)
+- Also listed on the SPT landing page card (like QuestCodex)
+
+`http://127.0.0.1:6969/...` → `ERR_EMPTY_RESPONSE` (SPT speaks HTTPS only).
+
+Edit `mod` / `pool` / `pricing` / `economy` / `events` / `trends` / `levels`, toggle stash quick-list, and view economy overview + `economy_state.json`. Pool/pricing/economy may need a server restart for a full rebuild.
+
 ## Build
 
 1. Open `UltimateFlea.csproj` in Visual Studio or Rider
 2. Build the project in Release mode
 3. Copy `bin\Release\UltimateFlea\` to `SPT\user\mods\`
-4. Start the server
+4. Build `client/UltimateFlea.Client` and copy the DLL to `BepInEx\plugins\UltimateFlea\`
+5. Start the server
 
 Config files are stored in `config\` next to the DLL. Economy state is saved to `data\economy_state.json`.
 
@@ -20,7 +33,7 @@ Config files are stored in `config\` next to the DLL. Economy state is saved to 
 
 Find item TPLs (24-char IDs) from:
 
-- https://db.sp-tushonka.com/ — search by name or ID
+- https://db.sp-tushonka.com/ (search by name or ID)
 - Offline list in this repo: [docs/ITEM_IDS.md](https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md) (EN + RU names)
 
 Items from other mods may only be listed in their `CustomItems` files or locale files.  
@@ -36,13 +49,21 @@ Invalid IDs are skipped and logged as warnings.
 | `enablePoolManager` | Enables item pool management |
 | `enablePricing` | Enables custom prices |
 | `enableEconomy` | Enables the economy simulation |
-| `priceSource` | `local` or `tarkovdev`. Tarkov.dev uses `avg24hPrice` from `json.tarkov.dev` and falls back to cache or local prices |
+| `liveFlea` | `true` = live online prices from the provider named by `priceSource`. `false` = local handbook prices only, the network is never touched. If the key is missing (older `mod.json`), it defaults to `true` only when `priceSource` is `tarkovdev`/`tarkovmarket`, so existing setups behave as before |
+| `priceSource` | Which live provider `liveFlea` uses: `tarkovdev` (default, `avg24hPrice` from `json.tarkov.dev`) or `tarkovmarket` (needs `tarkovMarketApiKey`). `local` is the legacy "no live source" value; with `liveFlea: true` it falls back to `tarkovdev` |
+| `tarkovMarketApiKey` | Optional, empty by default. Used only with `priceSource: "tarkovmarket"`. Experimental, see below |
+| `priceFetchTimeoutSeconds` | Timeout per attempt of the live price download (default `180`, range 10-1800) |
 | `pvePrices` | Uses PvE Tarkov.dev prices instead of regular prices |
 | `preserveBasePrices` | Stops SPT from rebuilding prices from the handbook |
 | `disableTraderPriceFloor` | Allows flea prices below trader purchase prices |
 | `exactOfferPrices` | Removes the default 0.8-1.2 offer price spread. This affects the entire flea market |
 | `playerOffersOnly` | Only real player listings. Disables virtual (FakePlayer) offers and trader assort listings on the flea |
+| `quickListFromStash` | Client: stash context menu **UltimateFlea: List** lists immediately and shows price + tax toast. Disable to hide the menu item |
 | `debug` | Enables additional logging |
+
+### Client quick list
+
+With `quickListFromStash: true` (also in BepInEx ConfigurationManager → UltimateFlea Client → Selling), right-click a stash item → **UltimateFlea: List**. The offer is created at the flea average price; a notification shows listed price and commission.
 
 ### `pool.json`
 
@@ -110,7 +131,7 @@ If another mod such as WTT puts an item in the global item blacklist, adding it 
 | `itemMultipliers` | Price multiplier by item TPL |
 | `categoryMultipliers` | Price multiplier by parent category |
 
-Use a 24-char TPL, not the item name — from https://db.sp-tushonka.com/ or [docs/ITEM_IDS.md](https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md).  
+Use a 24-char TPL, not the item name. Get it from https://db.sp-tushonka.com/ or [docs/ITEM_IDS.md](https://github.com/SVAR316/UltimateFlea/blob/main/docs/ITEM_IDS.md).  
 Requires `"enablePricing": true` in `mod.json`. Restart the server after edits.
 
 Example: lock Graphics card to 200000 RUB forever:
@@ -267,8 +288,63 @@ Output: `client/UltimateFlea.Client/bin/Release/BepInEx/plugins/UltimateFlea/`. 
 ## Trades and Tarkov.dev
 
 Buying an item from the flea market increases its `demand`. A completed player offer increases its `supply`.  
-Set `priceSource` to `"tarkovdev"` to use `avg24hPrice` (fallback: `lastLowPrice`) from [json.tarkov.dev](https://json.tarkov.dev/endpoints).
+### Price sources
+
+Set `liveFlea` to `true` to use live prices. `priceSource` picks the provider:
+
+- `tarkovdev` - `avg24hPrice` (fallback: `lastLowPrice`) from the static dump at [json.tarkov.dev](https://json.tarkov.dev/endpoints). `pvePrices` switches it to the PvE dump.
+- `tarkovmarket` - **experimental, off by default.** Needs `tarkovMarketApiKey`; reads `api.tarkov-market.app/api/v1/items/all`. The response schema and auth header (`x-api-key`) could not be verified without a key, and PvE support there is unconfirmed. A response with fewer than 300 usable prices is rejected. With an empty key the mod uses `tarkovdev` instead.
+
+Fallback chain: live download -> disk cache (`data/`) -> local handbook prices. Items missing from the live feed also use local prices. With `liveFlea: false` the active source is always local and no request is made, whatever `priceSource` says.
+
+Troubleshooting:
+
+- The live fetch is a ~17 MB download. The mod requests gzip, streams the response, waits up to `priceFetchTimeoutSeconds` per attempt and revalidates with `ETag` / `If-Modified-Since`: when nothing changed (HTTP 304) the cached prices are reused without downloading again.
+- The server log names the failed stage (`dns`, `tls`, `connect`, `timeout`, `http NNN`, `parse`) and how many prices are in effect afterwards.
+- `api.tarkov.dev/graphql` being down does **not** affect this mod; it only reads the static `json.tarkov.dev` dump.
+- To work fully offline, set `liveFlea` to `false`.
 
 ## Planned
 
 - Client UI for level locks (lock icon and level on categories, blocked sell window)
+
+## Presets
+
+Presets are one-click bundles of settings, available over the web API (`/ultimateflea/api/presets`) and the dashboard. A preset **replaces** each config file it targets (the other files are untouched), and goes through the same validation, clamping and atomic save as editing a config by hand. A `.bak` copy of the previous file is kept next to it. After a pool preset the flea pool is re-applied immediately; pricing and economy changes may need a server restart.
+
+| Id | Touches | What it does |
+|---|---|---|
+| `vanilla_flat` | pool, pricing, economy | Base prices, almost frozen simulation; resets pool and pricing. |
+| `casual_cheap` | pricing, economy | About 25% cheaper, gentle market. |
+| `hardcore_scarce` | pool, pricing, economy | Removes keycards, armor plates, sniper rifles, machine guns and special items; higher prices; strong early-wipe premium. |
+| `volatile_market` | economy | Strong reaction to trades and noise. |
+| `stable_market` | economy | Weak reaction, little noise. |
+| `early_wipe` | economy | Long, strong price premium at wipe start (best with `priceSource: local`). |
+| `barter_friendly` | pricing | Barter, keys and electronics worth more; guns and ammo slightly less. |
+| `live_tarkov` | economy, events, trends | A 120-day wipe model (early shortages, supply glut after flea unlock, mid-wipe ammo and armor inflation, pre-wipe trader sale). Estimated shape, not real price data; best with the local price source. Replaces all three configs and turns events and trends on. |
+| `modded_items_flea` | pool | Puts tradable items added by your installed mods on the flea (computed at apply time). |
+
+Item ids in a preset that your item database does not know are ignored, and the apply response carries a `warning` listing them.
+
+### Modded items preset
+
+`modded_items_flea` forces every tradable item added by your installed mods onto the flea. No item id is hardcoded. An item counts as added by a mod when it is not in the vanilla item list that ships with your server (`SPT_Data/database/templates/items.json`), or when SPT's mod item cache credits it to a mod; the cache alone is not used because it can be empty even with mods installed. Items whose mod cannot be pinned down are included too, since they are still not vanilla. Quest items, unsaleable items, containers (loot containers, stashes, corpses) and items with no flea or handbook price are skipped. The result is merged into `pool.json` `add`; your other pool settings stay. The apply response `warning` says how many items were added, from which mods, and how many were of unknown source. The preset is unavailable, with a reason, when no such items exist. The `unavailableReason`, `warning` and `error` fields of the preset API are objects with `en` and `ru` text.
+
+Some mods ship items with `CanSellOnRagfair` set to false. You can force any such item onto the flea by hand through `pool.json` `add`. Example (an id specific to one release of the Manimal's CS Gas mod, yours may differ):
+
+```json
+{ "mode": "blacklist", "add": ["6a5d6a5f4ed8c025a0a2cff0"] }
+```
+
+### Partial failure
+
+If a preset touches several configs and a later one fails to save, the earlier ones stay applied (there is no rollback). The response is HTTP 400 with `error` explaining which config failed, plus `applied` listing what was saved.
+
+## Item catalogue endpoint
+
+`GET /ultimateflea/api/items` returns every item (name and short name in English and Russian, category, and source mod) for the dashboard's item picker, so you do not have to type 24-character TPL ids. It is built on the first request, not at server start, then cached until restart, and sent gzipped with an `ETag`.
+
+- SPT ships no item icons (the game renders them at runtime from its asset bundles), so category icons are the baseline. A category icon URL is included only when SPT's image router confirms it serves that file; otherwise it is `null`.
+- Real item pictures come from the game client's own icon cache on your disk (`user/sptappdata/<version>/` next to the server's `mods` folder). Items that have a picture carry `"ic": true`, and `GET /ultimateflea/api/items/{tpl}/icon` serves it (404 otherwise). The files are BSG assets: they are read from where the client wrote them and are never copied into the mod or a release. Coverage is partial: roughly 1 in 4 items (about 1060 of 4553 on the machine this was developed on), only items you have already seen in game, so it grows as you play and a fresh install has none. Items that hold other items (weapons with attachments, armor with plates, rigs with contents) are not covered. The key formula is tied to the current client build; a future client change would simply reduce matches. If the cache folder is missing, the feature turns itself off with one log line.
+- The "source" label of an item is best effort and is never a guess. An item is "vanilla" (`src` 0) only if its id is in the vanilla item list that ships with your server (`SPT_Data/database/templates/items.json`). Items credited by SPT's mod item cache get that mod. Items that are neither (typically ones a mod such as WTT writes straight into the item database, which the cache does not record) are attributed by reading the mod folders: an item goes to the mod whose JSON files define it (the id is a top-level key of an item definition), otherwise to the one mod that mentions its id. If no mod, or more than one mod, mentions it, or the vanilla list cannot be found, the item is shown with an unknown source (`src` -1). A mod that only references another mod's item id, or that builds ids in code, can still be mislabelled or left unknown.
+- A missing name falls back in this order: Russian to English, then the item's template name, then its id.
