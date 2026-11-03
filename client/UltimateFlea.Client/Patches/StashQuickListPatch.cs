@@ -38,6 +38,7 @@ namespace UltimateFlea.Client.Patches
 
         private static bool _reorderLogged;
         private static bool _iconLogged;
+        private static bool _raidCheckLogged;
 
         public static bool IsRussian()
         {
@@ -261,6 +262,49 @@ namespace UltimateFlea.Client.Patches
         }
 
         /// <summary>
+        /// Mirrors the game's own rule for its native Add offer entry
+        /// (ItemContextInteractionsSwitcher.RagFairAvailable): never in raid, and only on the trader,
+        /// inventory, flea or hideout item screens. Using the game's rule keeps us correct on screens
+        /// we did not think of (transit, scav inventory, insurance). Fails open: a broken check must not
+        /// remove a working feature everywhere, and the server still validates the offer.
+        /// </summary>
+        public static bool IsFleaListingAllowed()
+        {
+            try
+            {
+                // The game itself reads this flag; it is marked [Obsolete] only as a discouragement.
+#pragma warning disable CS0618
+                if (InGameStatus.InRaid)
+                {
+                    return false;
+                }
+#pragma warning restore CS0618
+
+                var ui = ItemUiContext.Instance;
+                if (ui == null)
+                {
+                    return true;
+                }
+
+                var type = ui.ContextType;
+                return type == EItemUiContextType.TraderScreen
+                    || type == EItemUiContextType.InventoryScreen
+                    || type == EItemUiContextType.RagfairScreen
+                    || type == EItemUiContextType.Hideout;
+            }
+            catch (Exception ex)
+            {
+                if (!_raidCheckLogged)
+                {
+                    _raidCheckLogged = true;
+                    Plugin.Log.LogDebug("[UltimateFlea] Raid check failed, allowing entry: " + ex.Message);
+                }
+
+                return true;
+            }
+        }
+
+        /// <summary>
         /// Context menu icons are plain sprites at "Characteristics/Icons/&lt;EItemInfoButton name&gt;"
         /// (InteractionButtonsContainer.Show loads them the same way). The game's own "AddOffer"
         /// entry is the flea-market action, so we reuse its sprite to look native. Fails soft: a
@@ -344,6 +388,12 @@ namespace UltimateFlea.Client.Patches
                     return;
                 }
 
+                // Never add the entry in raid (or on screens where the game hides Add offer).
+                if (!QuickListState.IsFleaListingAllowed())
+                {
+                    return;
+                }
+
                 var item = itemContext.Item;
                 var tpl = item.TemplateId.ToString();
 
@@ -417,6 +467,13 @@ namespace UltimateFlea.Client.Patches
         {
             try
             {
+                // Safety net in case the menu entry outlived a raid start.
+                if (!QuickListState.IsFleaListingAllowed())
+                {
+                    Warn(QuickListState.L("Недоступно в рейде", "Not available in raid"));
+                    return;
+                }
+
                 var ui = ItemUiContext.Instance;
                 if (ui?.Session?.RagFair == null)
                 {
