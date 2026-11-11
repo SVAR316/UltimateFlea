@@ -60,7 +60,7 @@ public class ConfigManager(
         Slot<TrendsConfig>("trends", "config/trends.json", false,
             m => m.Trends, (m, v) => m.Trends = v, (m, v) => m.ValidateTrends(v)),
         Slot<LevelLocksConfig>("levels", "config/levels.json", false,
-            m => m.Levels, (m, v) => m.Levels = v),
+            m => m.Levels, (m, v) => m.Levels = v, (m, v) => m.ValidateLevels(v)),
     ];
 
     // Publishing happens under this lock so two writers (web save vs. reload) never interleave.
@@ -215,6 +215,17 @@ public class ConfigManager(
         mod.LiveFlea = mod.ResolveLiveFlea();
         mod.TarkovMarketApiKey = mod.TarkovMarketApiKey?.Trim() ?? string.Empty;
         mod.PriceFetchTimeoutSeconds = Math.Clamp(mod.PriceFetchTimeoutSeconds, 10, 1800);
+
+        // offerSpread wins; the deprecated exactOfferPrices only maps when it is absent. An unknown
+        // value falls back the same way, with a warning. The alias is dropped once resolved.
+        if (!string.IsNullOrWhiteSpace(mod.OfferSpread) &&
+            mod.OfferSpread.Trim().ToLowerInvariant() is not (ModConfig.SpreadLive or ModConfig.SpreadSpt or ModConfig.SpreadExact))
+        {
+            logger.Warning($"[UltimateFlea] Unknown offerSpread '{mod.OfferSpread}', expected live, spt or exact.");
+        }
+
+        mod.OfferSpread = mod.ResolveOfferSpread();
+        mod.ExactOfferPrices = null;
     }
 
     private void ValidateEconomy(EconomyConfig e)
@@ -252,6 +263,33 @@ public class ConfigManager(
             logger.Warning($"[UltimateFlea] Unknown pool mode '{pool.Mode}', defaulting to 'blacklist'");
             pool.Mode = "blacklist";
         }
+        // nestedCategories is a plain bool (default true); nothing to normalise.
+    }
+
+    // baseTable resolution: an explicit baseTable wins. If it is absent but the deprecated useSptDefaults
+    // is present in the file, map true -> "spt" and false -> "none" so existing installs keep their behaviour.
+    // Neither present -> "bundled". The result is stored concretely and the legacy flag cleared.
+    private void ValidateLevels(LevelLocksConfig levels)
+    {
+        var table = levels.BaseTable?.Trim().ToLowerInvariant();
+
+        if (string.IsNullOrEmpty(table))
+        {
+            table = levels.UseSptDefaults switch
+            {
+                true => "spt",
+                false => "none",
+                null => "bundled",
+            };
+        }
+        else if (table is not ("bundled" or "spt" or "none"))
+        {
+            logger.Warning($"[UltimateFlea] Unknown levels baseTable '{levels.BaseTable}', expected bundled, spt or none. Using 'bundled'.");
+            table = "bundled";
+        }
+
+        levels.BaseTable = table;
+        levels.UseSptDefaults = null;
     }
 
     private void ValidateEvents(EventsConfig events)

@@ -191,7 +191,8 @@ internal sealed record LiveResult(
     bool FromCache,
     string? ETag,
     string? LastModified,
-    string? FailureStage);
+    string? FailureStage,
+    Dictionary<MongoId, PriceSpread>? Spreads = null);
 
 /// <summary>
 /// Common behaviour of the online price sources: the live feed is tried first, then the disk
@@ -202,11 +203,25 @@ public abstract class RemotePriceSource<TSelf>(ISptLogger<TSelf> logger, ConfigM
     // Published as a single reference: the tick thread either sees the old map or the new one.
     private volatile IReadOnlyDictionary<MongoId, double> _prices = new Dictionary<MongoId, double>();
 
+    private volatile IReadOnlyDictionary<MongoId, PriceSpread> _spreads = new Dictionary<MongoId, PriceSpread>();
+
     protected ISptLogger<TSelf> Log { get; } = logger;
     protected ConfigManager Config { get; } = configManager;
 
     public abstract string Id { get; }
     public int CachedCount => _prices.Count;
+    public int SpreadCount => _spreads.Count;
+
+    /// <summary>Per-item offer band (ratios of the reference price), or null when the feed gave none.</summary>
+    public PriceSpread? GetSpread(MongoId tpl) => _spreads.TryGetValue(tpl, out var spread) ? spread : null;
+
+    /// <summary>Spread data loaded from the disk cache; sources without any return null.</summary>
+    protected virtual Dictionary<MongoId, PriceSpread>? LoadSpreadsFromDisk() => null;
+
+    /// <summary>Persists the spread data next to the price cache.</summary>
+    protected virtual void SaveSpreads(Dictionary<MongoId, PriceSpread> spreads)
+    {
+    }
 
     /// <summary>Short name used as the log prefix.</summary>
     protected abstract string Label { get; }
@@ -229,6 +244,7 @@ public abstract class RemotePriceSource<TSelf>(ISptLogger<TSelf> logger, ConfigM
         if (live.Prices is { Count: > 0 } fresh)
         {
             _prices = fresh;
+            _spreads = live.Spreads ?? LoadSpreadsFromDisk() ?? new Dictionary<MongoId, PriceSpread>();
             if (live.FromCache)
             {
                 Log.Info($"[UltimateFlea] {Label}: not modified (HTTP 304), {fresh.Count} cached prices in effect.");
@@ -238,6 +254,7 @@ public abstract class RemotePriceSource<TSelf>(ISptLogger<TSelf> logger, ConfigM
                 Log.Info($"[UltimateFlea] {Label}: downloaded {fresh.Count} prices.");
                 if (SaveCache(fresh))
                 {
+                    SaveSpreads(live.Spreads ?? new Dictionary<MongoId, PriceSpread>());
                     PersistValidators(live);
                 }
             }
@@ -250,11 +267,19 @@ public abstract class RemotePriceSource<TSelf>(ISptLogger<TSelf> logger, ConfigM
         if (disk is not null)
         {
             _prices = disk;
+            _spreads = LoadSpreadsFromDisk() ?? new Dictionary<MongoId, PriceSpread>();
             Log.Warning($"[UltimateFlea] {Label}: live fetch failed at stage '{stage}', using disk cache ({disk.Count} prices in effect).");
             return;
         }
 
         Log.Warning($"[UltimateFlea] {Label}: live fetch failed at stage '{stage}' and no usable disk cache, keeping {_prices.Count} known prices in effect.");
+    }
+
+    /// <summary>Drops the in-memory prices so a failed refetch cannot keep serving stale ones.</summary>
+    public void ClearLoaded()
+    {
+        _prices = new Dictionary<MongoId, double>();
+        _spreads = new Dictionary<MongoId, PriceSpread>();
     }
 
     public double? GetBasePrice(MongoId tpl)
@@ -340,11 +365,106 @@ public class TarkovDevPriceSource(
     protected override string CachePath => Path.Combine(JsonFileStore.DataDir(Config.ModPath), $"tarkovdev_prices-{GameMode}.json");
     private string ValidatorsPath => CachePath + ".meta";
 
+    // Offer-spread data lives in its own versioned file so the price cache keeps its old shape.
+    // v2: spreads[tpl] = [lowRatio, highRatio, low24hRoubles, high24hRoubles]. A v1 file (ratios only)
+    // is ignored, which also forces a full refetch instead of a 304.
+    private const int SpreadCacheVersion = 2;
+    private string SpreadsPath => CachePath + ".spread";
+
+    private sealed class SpreadCache
+    {
+        [JsonPropertyName("version")]
+        public int Version { get; set; }
+
+        [JsonPropertyName("spreads")]
+        public Dictionary<string, double[]>? Spreads { get; set; }
+    }
+
+    protected override Dictionary<MongoId, PriceSpread>? LoadSpreadsFromDisk()
+    {
+        if (string.IsNullOrEmpty(Config.ModPath) || !File.Exists(SpreadsPath))
+        {
+            return null;
+        }
+
+        var data = JsonFileStore.ReadOrDefault<SpreadCache, TarkovDevPriceSource>(
+            SpreadsPath, JsonFileStore.Data, Log, "tarkovdev spread cache");
+        if (data is not { Spreads: { Count: > 0 } raw } || data.Version != SpreadCacheVersion)
+        {
+            return null;
+        }
+
+        var spreads = new Dictionary<MongoId, PriceSpread>(raw.Count);
+        foreach (var (id, pair) in raw)
+        {
+            if (pair is { Length: 4 } &&
+                PriceSpread.TryFromCache(pair[0], pair[1], pair[2], pair[3], out var spread) &&
+                MongoIds.TryParse(id, Log, "tarkovdev spread cache", out var tpl))
+            {
+                spreads[tpl] = spread;
+            }
+        }
+
+        return spreads.Count > 0 ? spreads : null;
+    }
+
+    protected override void SaveSpreads(Dictionary<MongoId, PriceSpread> spreads)
+    {
+        if (string.IsNullOrEmpty(Config.ModPath))
+        {
+            return;
+        }
+
+        var data = new SpreadCache
+        {
+            Version = SpreadCacheVersion,
+            Spreads = spreads.ToDictionary(kv => kv.Key.ToString(), kv => new[] { kv.Value.Low, kv.Value.High, kv.Value.AbsLow, kv.Value.AbsHigh })
+        };
+        JsonFileStore.WriteAtomic(SpreadsPath, data, JsonFileStore.Data, Log, "tarkovdev spread cache", out _);
+    }
+
+    /// <summary>
+    /// Deletes the cached price dump and its validators for BOTH game modes, so the next fetch is
+    /// unconditional (no ETag / If-Modified-Since, hence no 304). Returns the deleted paths.
+    /// </summary>
+    public bool DeleteAllCaches(List<string> deleted, List<string> errors)
+    {
+        if (string.IsNullOrEmpty(Config.ModPath))
+        {
+            errors.Add("Mod path is not known yet.");
+            return false;
+        }
+
+        var dir = JsonFileStore.DataDir(Config.ModPath);
+        foreach (var mode in new[] { "regular", "pve" })
+        {
+            var cache = Path.Combine(dir, $"tarkovdev_prices-{mode}.json");
+            foreach (var file in new[] { cache, cache + ".meta", cache + ".spread" })
+            {
+                try
+                {
+                    if (File.Exists(file))
+                    {
+                        File.Delete(file);
+                        deleted.Add(file);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{Path.GetFileName(file)}: {ex.Message}");
+                }
+            }
+        }
+
+        return errors.Count == 0;
+    }
+
     internal override LiveResult FetchLive()
     {
         // Revalidate only when a usable disk cache exists to fall back on for a 304.
         string? etag = null, lastModified = null;
         Dictionary<MongoId, double>? cached = null;
+        Dictionary<MongoId, PriceSpread>? cachedSpreads = null;
         if (!string.IsNullOrEmpty(Config.ModPath))
         {
             var meta = JsonFileStore.ReadOrDefault<FeedValidators, TarkovDevPriceSource>(
@@ -352,7 +472,10 @@ public class TarkovDevPriceSource(
             if (meta is not null && (!string.IsNullOrEmpty(meta.ETag) || !string.IsNullOrEmpty(meta.LastModified)))
             {
                 cached = LoadFromDisk();
-                if (cached is not null)
+                // A cache written before spread data existed must be refetched in full (no 304),
+                // otherwise the spread data would never appear.
+                cachedSpreads = LoadSpreadsFromDisk();
+                if (cached is not null && cachedSpreads is not null)
                 {
                     etag = meta.ETag;
                     lastModified = meta.LastModified;
@@ -374,12 +497,12 @@ public class TarkovDevPriceSource(
         switch (outcome.Status)
         {
             case FetchStatus.NotModified when cached is not null:
-                return new LiveResult(cached, true, etag, lastModified, null);
+                return new LiveResult(cached, true, etag, lastModified, null, cachedSpreads);
 
             case FetchStatus.Ok when outcome.Value is { } root:
-                var prices = ToPrices(root);
+                var prices = ToPrices(root, out var spreads);
                 return prices.Count > 0
-                    ? new LiveResult(prices, false, outcome.ETag, outcome.LastModified, null)
+                    ? new LiveResult(prices, false, outcome.ETag, outcome.LastModified, null, spreads)
                     : new LiveResult(null, false, null, null, "parse (no usable prices)");
 
             default:
@@ -410,9 +533,10 @@ public class TarkovDevPriceSource(
         return root?.Data?.Items is null ? null : root;
     }
 
-    private Dictionary<MongoId, double> ToPrices(DevRoot root)
+    private Dictionary<MongoId, double> ToPrices(DevRoot root, out Dictionary<MongoId, PriceSpread> spreads)
     {
         var prices = new Dictionary<MongoId, double>();
+        spreads = new Dictionary<MongoId, PriceSpread>();
         var skipped = 0;
 
         foreach (var (id, item) in root.Data!.Items!)
@@ -428,7 +552,14 @@ public class TarkovDevPriceSource(
             var price = item.Avg24hPrice is > 0 ? item.Avg24hPrice : item.LastLowPrice;
             if (price is > 0)
             {
-                prices[new MongoId(id)] = price.Value;
+                var tpl = new MongoId(id);
+                prices[tpl] = price.Value;
+
+                // Ratios are taken against the price actually chosen above, not against avg24h.
+                if (PriceSpread.TryCreate(price.Value, item.Low24hPrice, item.High24hPrice, out var spread))
+                {
+                    spreads[tpl] = spread;
+                }
             }
         }
 
@@ -454,6 +585,12 @@ public class TarkovDevPriceSource(
 
     private sealed class DevItem
     {
+        [JsonPropertyName("low24hPrice")]
+        public double? Low24hPrice { get; set; }
+
+        [JsonPropertyName("high24hPrice")]
+        public double? High24hPrice { get; set; }
+
         [JsonPropertyName("avg24hPrice")]
         public double? Avg24hPrice { get; set; }
 

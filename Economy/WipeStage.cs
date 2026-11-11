@@ -19,6 +19,11 @@ public class WipeStage(
             return 1.0;
         }
 
+        if (IsSuppressedByLivePrices())
+        {
+            return 1.0;
+        }
+
         var ageDays = GetWipeAgeDays();
         if (ageDays is null)
         {
@@ -34,6 +39,27 @@ public class WipeStage(
         }
 
         return multiplier;
+    }
+
+    /// <summary>True when live prices are active, the wipe bump is enabled and not forced: the bump is skipped.</summary>
+    public bool IsSuppressedByLivePrices()
+    {
+        var wipe = configManager.Economy.Wipe;
+        return wipe.Enabled && !wipe.ForceWithLivePrices && configManager.Mod.ResolveLiveFlea();
+    }
+
+    private int _warned;
+
+    /// <summary>Logs the startup warning once per process when the wipe bump is being suppressed.</summary>
+    public void WarnIfSuppressed()
+    {
+        if (IsSuppressedByLivePrices() && Interlocked.Exchange(ref _warned, 1) == 0)
+        {
+            logger.Warning(
+                "[UltimateFlea] economy.wipe.enabled is true while live prices are active (liveFlea=true): live averages already " +
+                "include the wipe stage, so the wipe multiplier is treated as 1.0 for this run. economy.json is not modified. " +
+                "Set economy.wipe.forceWithLivePrices=true to stack it anyway.");
+        }
     }
 
     /// <summary>

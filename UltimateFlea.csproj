@@ -7,7 +7,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>1.3.0</Version>
+    <!-- This mod is loaded by the server from its folder; the host never reads a static web assets manifest.
+         Generating one only embeds this machine's absolute paths and host asset routes into the output. -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <Version>1.3.2</Version>
     <OutputPath>bin\$(Configuration)\$(ProjectName)\$(AssemblyName)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>

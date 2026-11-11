@@ -78,7 +78,7 @@ public class DashboardService(
             levels = new
             {
                 levels.Enabled,
-                levels.UseSptDefaults,
+                levels.BaseTable,
                 items = levels.Items.Count,
                 categories = levels.Categories.Count,
                 rules = levelLocks.GetRules(),

@@ -10,7 +10,8 @@ namespace UltimateFlea.Presets;
 /// Built once from a static initialiser and never mutated afterwards, so Kestrel threads can read
 /// it without any locking. Category ids are the item-tree parents (items.json "_parent"), the same
 /// ids PoolManager and EconomyEngine match on, not handbook category ids.
-/// A preset replaces each config it targets as a whole; configs it does not target are untouched.
+/// A preset replaces each config it targets as a whole, except those listed in Partial (merged key by key);
+/// configs it does not target are untouched.
 /// </remarks>
 public static class PresetCatalog
 {
@@ -166,6 +167,29 @@ public static class PresetCatalog
                     ]}
                     """,
             }),
+
+        // mod is partial: only the four keys below are written, so enabled / pvePrices / quickListFromStash /
+        // tarkovMarketApiKey etc. keep their values. Applying also runs ResetService (price cache + state).
+        new("live_clean",
+            new("Live tarkov.dev prices (clean)", "Чистый live tarkov.dev"),
+            new("Switches the flea to live tarkov.dev prices from a clean state. Overwrites your pool, pricing, economy, events and trends configs (pool reset to defaults, no multipliers, early-wipe bump off, events and trends off) and changes four keys in mod: liveFlea, priceSource, preserveBasePrices, offerSpread; other mod keys, including pvePrices, are left as they are. Also clears the price cache and economy state and refetches live prices, which can take a while. Each offer is spread around the live reference price using that item's own 24h low/high from tarkov.dev (offerSpread \"live\"); items without that data use SPT's normal 0.8-1.2 spread. Set offerSpread to \"exact\" yourself if you want every offer at exactly the reference price.",
+                "Переключает барахолку на живые цены tarkov.dev с чистого состояния. Перезаписывает ваши конфиги pool, pricing, economy, events и trends (пул по умолчанию, без множителей, наценка начала вайпа выключена, события и тренды выключены) и меняет четыре ключа в mod: liveFlea, priceSource, preserveBasePrices, offerSpread; остальные ключи mod, включая pvePrices, не трогает. Также очищает кэш цен и состояние экономики и заново загружает живые цены, это может занять время. Разброс цен лотов берётся для каждого предмета из его собственных минимума и максимума за 24 часа с tarkov.dev (offerSpread \"live\"); для предметов без этих данных действует обычный разброс SPT 0.8-1.2. Если нужны лоты ровно по справочной цене, сами поставьте offerSpread в \"exact\"."),
+            ["market", "pool", "pricing", "events", "trends", "mod"],
+            [],
+            PresetKind.Static,
+            new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+            {
+                ["mod"] = Json("""{"liveFlea":true,"priceSource":"tarkovdev","preserveBasePrices":true,"offerSpread":"live"}"""),
+                ["pool"] = Json("""{"mode":"blacklist","add":[],"remove":[],"addCategories":[],"removeCategories":[],"nestedCategories":true,"useLiveBlacklist":false}"""),
+                ["pricing"] = Json("""{"globalMultiplier":1.0,"fixedPrices":{},"itemMultipliers":{},"categoryMultipliers":{}}"""),
+                ["economy"] = Json("""{"simIntervalMinutes":60,"demandPerBuy":0.03,"supplyPerSell":0.03,"priceElasticity":0.3,"decayPerTick":0.08,"settleSpeed":0.1,"noise":0.03,"minPriceFactor":0.7,"maxPriceFactor":2.0,"wipe":{"enabled":false,"startLengthDays":14,"startMultiplier":1.8,"forceWithLivePrices":false}}"""),
+                ["events"] = Json("""{"enabled":false,"events":[]}"""),
+                ["trends"] = Json("""{"enabled":false,"trends":[]}"""),
+            })
+        {
+            Partial = ["mod"],
+            ResetsData = true,
+        },
 
         // No ids on purpose: item ids are specific to each mod release, so the TPL set is computed
         // from the live server when the preset is shown or applied (see ModdedItemsDetector).

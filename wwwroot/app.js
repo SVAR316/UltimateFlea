@@ -106,6 +106,24 @@ const I18N = {
       maintenanceHint: "Re-reads every config/*.json from disk and re-applies the item pool and level locks. Use it after editing files by hand.",
     },
 
+    reset: {
+      open: "Reset data…",
+      title: "Reset live prices / economy",
+      intro: "Use this after switching to live pricing so the market does not drift up from stale values. Choose what to delete:",
+      priceCache: "Live price cache",
+      priceCacheDesc: "Deletes data/tarkovdev_prices-regular.json, data/tarkovdev_prices-pve.json and their .meta validators (both game modes), then downloads prices again without conditional headers.",
+      economyState: "Economy state",
+      economyStateDesc: "Deletes data/economy_state.json: every item's current price, demand and supply. The market reseeds from the current base prices.",
+      warn: "Economy state cannot be recovered except from data/economy_state.json.bak (and a timestamped economy_state.json.reset-*.bak copy). Prices are reapplied immediately; no server restart is needed.",
+      hint: "Tip: clearing only the price cache keeps each item's current price from the economy state, so prices still drift toward the new base. Tick both for a clean start.",
+      confirm: "Delete and reset",
+      working: "Resetting… the price download can take a while.",
+      cancel: "Cancel",
+      done: "Reset done: {prices} live prices loaded, {items} items repriced ({files} files deleted).",
+      failed: "Reset failed",
+      none: "Select at least one option.",
+    },
+
     toast: {
       saved: "Saved.",
       savedRestart: "Saved. Restart the server for the full effect.",
@@ -114,6 +132,38 @@ const I18N = {
       reloaded: "Configs reloaded from disk.",
       reloadFailed: "Reload failed",
       loadFailed: "Load failed",
+    },
+
+    adv: {
+      title: "Live pricing: what will not match tarkov.dev",
+      lead: "Live flea is on, but live flea does not mean flea prices equal tarkov.dev prices. These settings change the result.",
+      blocks: "Blocks live values",
+      skews: "Skews live values",
+      notes: "Notes",
+      items: "{n} items",
+      rules: "{n} rules",
+      none: "none",
+      localSource: "The live flag does nothing, handbook prices are used.",
+      noKey: "No API key: the feed is rejected and prices fall back to the cache, then to the handbook.",
+      fixed: "These items ignore live prices entirely and are excluded from the simulation.",
+      economy: "The simulation moves prices away from live every tick (elasticity, noise, settle), clamped to {min} to {max} of the live base.",
+      global: "Scales every live price, and the clamp band scales with it.",
+      itemMult: "Per-item multipliers stack on top of live prices.",
+      catMult: "Per-category multipliers stack on top of live prices.",
+      events: "{n} rules active now; they multiply on top of live prices.",
+      trends: "Sinusoidal category multipliers on top of live prices.",
+      wipeOff: "The early-wipe bump is suppressed automatically while live pricing is on.",
+      wipeForce: "Forced: the early-wipe bump stacks on live averages, which already include the wipe stage.",
+      offersSpt: "Offer spread is \"spt\": every item gets the same random 0.8x-1.2x band, which does not reflect how widely that item really trades, and no single offer matches the live number.",
+      offersLive: "Offer spread is \"live\": each offer is randomised inside that item's own 24h low-high band from tarkov.dev, so offers track the real market range; items without that data use SPT's 0.8x-1.2x.",
+      offersExact: "Offer spread is \"exact\": every offer lists at the reference price, so offers match the live number but show no spread at all.",
+      preserve: "SPT regenerates handbook prices and reapplies the trader floor, fighting the live values.",
+      floor: "The trader price floor can push a price above the live value.",
+      pve: "Using the {dump} dump; it must match the game mode being played.",
+      pveOn: "PvE",
+      pveOff: "regular",
+      restart: "Live prices are fetched once at server start; restart the server to refresh them.",
+      missing: "Items missing from the feed fall back to the handbook price; the startup log reports the fallback count.",
     },
 
     form: {
@@ -285,12 +335,16 @@ const I18N = {
       applying: "Applying…",
       requires: "Requires",
       touches: "Touches",
+      partialNote: "Only these keys are changed; all other keys of this config keep their current values.",
+      resetNote: "Applying also clears the price cache and economy state and refetches live prices (can take a while).",
       unavailable: "Unavailable",
       empty: "No presets are available.",
       absent: "Presets are not available on this server",
       absentHint: "This server build does not offer presets yet. Everything else works as usual; update the mod to get them.",
       loadFailed: "Could not load presets",
       confirm: "Apply preset “{name}”?\n\nThis OVERWRITES the current values of these configs: {configs}.\nYour existing settings in them will be replaced.",
+      confirmPartial: "In {configs}, only the keys the preset sets are changed; everything else is kept.",
+      confirmReset: "It also clears the live price cache and the economy state (a backup of the state is kept).",
       applied: "Preset applied: {configs}.",
       appliedRestart: "Preset applied. Restart the server for the full effect.",
       applyFailed: "Could not apply the preset",
@@ -344,14 +398,14 @@ const I18N = {
         enablePoolManager: "Applies pool.json, which decides what may appear on the flea. Off leaves SPT's default item pool untouched.",
         enablePricing: "Applies your prices from pricing.json (multipliers, fixed prices) at server start. Price setup runs when this or Economy is on, so with Economy on this adds nothing; alone it gives static prices with no simulation.",
         enableEconomy: "Runs the market simulation: buys push prices up, sales push them down, and wipe age, events and trends shift them over time. Off means prices never move after startup, and economy, events and trends have no effect.",
-        liveFlea: "On: base prices come from the online provider in Price source. Off: local handbook prices only, the network is never touched. If the download fails, the mod falls back to the disk cache, then to local prices.",
+        liveFlea: "On: base prices come from the online provider in Price source. Off: local handbook prices only, the network is never touched. If the download fails, the mod falls back to the disk cache, then to local prices. Items missing from the live feed also use local prices; the startup log says how many.",
         priceSource: "Online provider used when Live flea is on: tarkovdev (24h average from json.tarkov.dev, the default) or tarkovmarket (experimental, needs an API key). Ignored when Live flea is off.",
         tarkovMarketApiKey: "API key for tarkov-market. Only used when Live flea is on and Price source is tarkovmarket; with an empty key the mod uses tarkovdev instead. Never logged.",
         priceFetchTimeoutSeconds: "How long to wait per attempt for the live price download (about 17 MB). Default 180, allowed 10-1800. Raise it on a slow connection. Only matters when Live flea is on.",
         pvePrices: "Use tarkov.dev PvE prices instead of regular ones. Only matters when Live flea is on with tarkovdev as the source.",
         preserveBasePrices: "Stops SPT from rebuilding flea prices from the handbook over the ones this mod sets. Best left on. Applied at server start.",
         disableTraderPriceFloor: "Lets offers sit below what traders pay; normally SPT raises such prices up to the trader price. Turn on if you want cheap items to be really cheap. Applied at server start.",
-        exactOfferPrices: "Removes the random 0.8-1.2 spread SPT puts on offer prices, so every offer lists at the exact price. Affects the whole flea. Applied at server start.",
+        offerSpread: "How offer prices vary around the reference price. live (default): each item uses its own 24h low/high from tarkov.dev, so the spread matches that item's real market (items without that data use spt). spt: SPT's global random 0.8-1.2 band for every item. exact: every offer at exactly the reference price. Replaces the old exactOfferPrices (true = exact, false = spt). Applied at server start.",
         playerOffersOnly: "Only real player listings: no generated (FakePlayer) offers and no trader assortment on the flea. The flea stays empty until players list something. Applied at server start.",
         quickListFromStash: "Client option: adds “UltimateFlea: List” to the stash right-click menu to list an item instantly with a price and tax toast. Needs the client plugin. Off hides the menu entry.",
         debug: "Extra detail in the server log (wipe stage, active events and trends, every economy tick). For troubleshooting only; it makes the log noisy.",
@@ -362,6 +416,8 @@ const I18N = {
         remove: "Item IDs (TPL) forced off the flea, whatever the category rules say.",
         addCategories: "Category IDs (the items' parent class) whose items go onto the flea. In whitelist mode this is the list of allowed categories; leave it empty there and only the items in add survive.",
         removeCategories: "Category IDs whose items are removed from the flea. Blacklist mode only; whitelist mode ignores it.",
+        nestedCategories: "On: a category rule also covers every subcategory (the item's parent or any ancestor matches). Off: only items whose direct parent is the listed category. Default on.",
+        useLiveBlacklist: "On: items that live Tarkov does not allow on the flea (noFlea in config/pool_bundled.json, from tarkov.dev) are treated as if listed in remove. Your add list still wins. Default off, because it changes what players can trade. Needs a restart.",
       },
       pricing: {
         globalMultiplier: "Multiplies every floating base price. 1.0 is unchanged, 2.0 doubles everything. Fixed prices are not affected. Rebuilt at server start.",
@@ -380,8 +436,9 @@ const I18N = {
         minPriceFactor: "Price floor as a share of the base price: it never drops below base × this. Default 0.7, minimum 0.01, sane 0.3-1.",
         maxPriceFactor: "Price ceiling as a share of the base price: it never rises above base × this. Default 2.0, never below the minimum, sane 1.5-3. It also caps early-wipe, event and trend boosts.",
         wipe: "Early-wipe boost: prices start higher right after a wipe and ease back to normal. Wipe age counts from the oldest PMC profile's registration date.",
-        wipe_enabled: "Turns the early-wipe bump on. Most useful with local prices; with tarkovdev leave it off, since live averages already include the wipe stage.",
+        wipe_enabled: "Turns the early-wipe bump on. Most useful with local prices; with live prices (Live flea on) it is skipped automatically unless Force with live prices is on, since live averages already include the wipe stage.",
         wipe_startLengthDays: "How many days the ramp lasts. Default 14. At 0 the bump is disabled.",
+        wipe_forceWithLivePrices: "By default the early-wipe bump is ignored (×1.0) while live prices are on, with a warning at startup, because live averages already include the wipe stage. On: apply it anyway and stack it on top of live prices. Default off.",
         wipe_startMultiplier: "Price multiplier on wipe day 0, easing linearly down to ×1.0 by the end of the ramp. Default 1.8, minimum 0.01. Still capped by the max price factor.",
       },
       events: {
@@ -404,7 +461,8 @@ const I18N = {
       },
       levels: {
         enabled: "Master switch for level locks: players below the required level cannot buy or sell the locked items on the flea. Off by default; the mod itself must be on too. Applied when you save.",
-        useSptDefaults: "Start from SPT's built-in tiered flea levels (live-like), then apply your items and categories on top. Off means only your own rules.",
+        baseTable: "Table your rules are applied on top of. bundled: UltimateFlea's curated level table (not live-EFT data; real EFT has no per-item flea levels). spt: SPT's built-in tiered flea. none: only your own rules. Default bundled.",
+        useSptDefaults: "Deprecated, use baseTable. Only read when baseTable is absent (on = spt, off = none). Start from SPT's built-in tiered flea levels (live-like), then apply your items and categories on top. Off means only your own rules.",
         lockBuying: "Block buying locked items below the required level. This also makes the flea UI show those offers as locked.",
         lockSelling: "Block listing and selling locked items below the required level.",
         items: "Item ID to the player level required for that item. 0 removes a lock that came from the SPT defaults. An item rule wins over its category.",
@@ -492,6 +550,24 @@ const I18N = {
       maintenanceHint: "Перечитывает все config/*.json с диска и заново применяет пул предметов и блокировки по уровню. Пригодится после правки файлов вручную.",
     },
 
+    reset: {
+      open: "Сбросить данные…",
+      title: "Сброс живых цен / экономики",
+      intro: "Нужно после перехода на живые цены, чтобы рынок не «дорастал» со старых значений. Выберите, что удалить:",
+      priceCache: "Кэш живых цен",
+      priceCacheDesc: "Удаляет data/tarkovdev_prices-regular.json, data/tarkovdev_prices-pve.json и их .meta (оба игровых режима), затем заново скачивает цены без условных заголовков.",
+      economyState: "Состояние экономики",
+      economyStateDesc: "Удаляет data/economy_state.json: текущую цену, спрос и предложение каждого предмета. Рынок заново строится от текущих базовых цен.",
+      warn: "Состояние экономики невозможно восстановить, кроме как из data/economy_state.json.bak (и копии economy_state.json.reset-*.bak с отметкой времени). Цены применяются сразу, перезапуск сервера не нужен.",
+      hint: "Совет: если сбросить только кэш цен, текущие цены предметов из состояния экономики сохранятся и будут дрейфовать к новой базе. Для чистого старта отметьте оба пункта.",
+      confirm: "Удалить и сбросить",
+      working: "Сброс… загрузка цен может занять время.",
+      cancel: "Отмена",
+      done: "Сброс выполнен: загружено живых цен {prices}, переоценено предметов {items} (удалено файлов: {files}).",
+      failed: "Сброс не удался",
+      none: "Выберите хотя бы один пункт.",
+    },
+
     toast: {
       saved: "Сохранено.",
       savedRestart: "Сохранено. Для полного эффекта перезапустите сервер.",
@@ -500,6 +576,38 @@ const I18N = {
       reloaded: "Конфиги перечитаны с диска.",
       reloadFailed: "Не удалось перечитать конфиги",
       loadFailed: "Не удалось загрузить",
+    },
+
+    adv: {
+      title: "Живые цены: что не совпадёт с tarkov.dev",
+      lead: "Live flea включён, но это не значит, что цены барахолки равны ценам tarkov.dev. Эти настройки меняют результат.",
+      blocks: "Блокируют живые цены",
+      skews: "Искажают живые цены",
+      notes: "Заметки",
+      items: "{n} шт.",
+      rules: "правил: {n}",
+      none: "нет",
+      localSource: "Флаг живых цен ничего не делает, берутся цены из хэндбука.",
+      noKey: "Ключа API нет: выдача отклоняется, цены берутся из кэша, а потом из хэндбука.",
+      fixed: "Эти предметы вообще не используют живые цены и исключены из симуляции.",
+      economy: "Симуляция каждый тик уводит цены от живых (эластичность, шум, возврат), в пределах от {min} до {max} от живой базы.",
+      global: "Масштабирует все живые цены, и коридор границ масштабируется вместе с ними.",
+      itemMult: "Множители предметов перемножаются с живыми ценами.",
+      catMult: "Множители категорий перемножаются с живыми ценами.",
+      events: "Сейчас активно правил: {n}; они умножаются поверх живых цен.",
+      trends: "Синусоидальные множители категорий поверх живых цен.",
+      wipeOff: "Надбавка раннего вайпа автоматически отключается, пока включены живые цены.",
+      wipeForce: "Принудительно: надбавка раннего вайпа накладывается на живые средние, которые уже учитывают стадию вайпа.",
+      offersSpt: "Разброс лотов \"spt\": у всех предметов один и тот же случайный коридор 0.8x-1.2x, он не отражает реальный разброс цен предмета, и ни один лот не совпадёт с живой ценой.",
+      offersLive: "Разброс лотов \"live\": цена каждого лота случайно выбирается внутри собственного 24-часового коридора минимум-максимум предмета с tarkov.dev, поэтому лоты следуют реальному рыночному диапазону; у предметов без этих данных действует 0.8x-1.2x от SPT.",
+      offersExact: "Разброс лотов \"exact\": все лоты стоят ровно по справочной цене, то есть совпадают с живым числом, но разброса нет вовсе.",
+      preserve: "SPT заново строит цены из хэндбука и снова применяет торговый минимум, борясь с живыми значениями.",
+      floor: "Торговый минимум может поднять цену выше живой.",
+      pve: "Используется дамп: {dump}; он должен совпадать с игровым режимом.",
+      pveOn: "PvE",
+      pveOff: "обычный",
+      restart: "Живые цены загружаются один раз при старте сервера; чтобы обновить, перезапустите сервер.",
+      missing: "Предметы, которых нет в выдаче, берутся по цене из хэндбука; число таких пишется в логе при старте.",
     },
 
     form: {
@@ -671,12 +779,16 @@ const I18N = {
       applying: "Применение…",
       requires: "Нужно",
       touches: "Затрагивает",
+      partialNote: "Меняются только эти ключи; остальные ключи этого конфига сохраняют текущие значения.",
+      resetNote: "Применение также очищает кэш цен и состояние экономики и заново загружает живые цены (может занять время).",
       unavailable: "Недоступен",
       empty: "Пресетов нет.",
       absent: "На этом сервере пресеты недоступны",
       absentHint: "В этой сборке сервера пресетов ещё нет. Всё остальное работает как обычно; обновите мод, чтобы они появились.",
       loadFailed: "Не удалось загрузить пресеты",
       confirm: "Применить пресет «{name}»?\n\nОн ПЕРЕЗАПИШЕТ текущие значения этих конфигов: {configs}.\nВаши нынешние настройки в них будут заменены.",
+      confirmPartial: "В {configs} меняются только те ключи, которые задаёт пресет; остальное сохраняется.",
+      confirmReset: "Также очищается кэш live-цен и состояние экономики (резервная копия состояния сохраняется).",
       applied: "Пресет применён: {configs}.",
       appliedRestart: "Пресет применён. Для полного эффекта перезапустите сервер.",
       applyFailed: "Не удалось применить пресет",
@@ -730,14 +842,14 @@ const I18N = {
         enablePoolManager: "Применяет pool.json: какие предметы вообще допускаются на барахолку. Если выключено, остаётся стандартный пул SPT.",
         enablePricing: "Подставляет цены из pricing.json (множители, фиксированные цены) при старте сервера. Расчёт цен запускается, если включено это или «Экономика», так что при включённой экономике флаг ничего не добавляет; сам по себе даёт статичные цены без симуляции.",
         enableEconomy: "Запускает симуляцию рынка: покупки толкают цену вверх, продажи вниз, а возраст вайпа, события и тренды сдвигают её со временем. Если выключено, после старта цены стоят на месте, а economy, events и trends ни на что не влияют.",
-        liveFlea: "Если включено, базовые цены тянутся из интернета у провайдера из Price source. Если выключено, используются только локальные цены из хэндбука, в сеть мод не лезет вообще. Если загрузка не удалась, берётся кэш с диска, а потом локальные цены.",
+        liveFlea: "Если включено, базовые цены тянутся из интернета у провайдера из Price source. Если выключено, используются только локальные цены из хэндбука, в сеть мод не лезет вообще. Если загрузка не удалась, берётся кэш с диска, а потом локальные цены. Предметы, которых нет в живой выдаче, тоже берутся по локальным ценам; сколько их, пишется в логе при старте.",
         priceSource: "Откуда брать цены, когда включён Live flea: tarkovdev (средняя за 24 часа с json.tarkov.dev, по умолчанию) или tarkovmarket (экспериментально, нужен ключ API). При выключенном Live flea не используется.",
         tarkovMarketApiKey: "Ключ API tarkov-market. Нужен, только если включён Live flea и выбран tarkovmarket; с пустым ключом мод возьмёт tarkovdev. В лог не пишется.",
         priceFetchTimeoutSeconds: "Сколько ждать одну попытку скачать живые цены (около 17 МБ). По умолчанию 180, допустимо 10-1800. На медленном интернете поднимите. Важно только при включённом Live flea.",
         pvePrices: "Брать с tarkov.dev цены PvE вместо обычных. Имеет смысл только при включённом Live flea и источнике tarkovdev.",
         preserveBasePrices: "Не даёт SPT перезаписать выставленные модом цены заново из хэндбука. Лучше оставить включённым. Применяется при старте сервера.",
         disableTraderPriceFloor: "Разрешает лотам стоить меньше, чем платит торговец; обычно SPT подтягивает такую цену до торговой. Включайте, если хотите, чтобы дешёвое реально было дешёвым. Применяется при старте сервера.",
-        exactOfferPrices: "Убирает случайный разброс цен лотов 0.8-1.2, который SPT добавляет по умолчанию: все лоты встают ровно по цене. Касается всей барахолки. Применяется при старте сервера.",
+        offerSpread: "Как цены лотов отклоняются от справочной. live (по умолчанию): у каждого предмета свой коридор минимум/максимум за 24 часа с tarkov.dev, поэтому разброс соответствует реальному рынку этого предмета (у предметов без этих данных работает spt). spt: общий случайный коридор SPT 0.8-1.2 для всех. exact: все лоты ровно по справочной цене. Заменяет прежний exactOfferPrices (true = exact, false = spt). Применяется при старте сервера.",
         playerOffersOnly: "Только лоты реальных игроков: без сгенерированных (FakePlayer) и без ассортимента торговцев. Пока игроки сами ничего не выставят, барахолка пустая. Применяется при старте сервера.",
         quickListFromStash: "Клиентская опция: ПКМ по предмету в схроне показывает «UltimateFlea: List», предмет сразу выставляется, а в уведомлении видны цена и налог. Нужен клиентский плагин. Если выключено, пункт меню скрыт.",
         debug: "Подробный лог сервера: стадия вайпа, активные события и тренды, каждый тик экономики. Нужен только для отладки, лог сильно разрастается.",
@@ -748,6 +860,9 @@ const I18N = {
         remove: "ID предметов (TPL), которые принудительно убираются с барахолки, что бы ни говорили правила по категориям.",
         addCategories: "ID категорий (родительский класс предметов), чьи предметы попадают на барахолку. В режиме whitelist это список разрешённых категорий; оставите пустым, и выживут только предметы из add.",
         removeCategories: "ID категорий, чьи предметы убираются с барахолки. Только для blacklist; в whitelist игнорируется.",
+        nestedCategories: "Вкл: правило категории действует и на все подкатегории (подходит родитель предмета или любой его предок). Выкл: только предметы, чей прямой родитель указан в списке. По умолчанию вкл.",
+        useLiveBlacklist: "Вкл: предметы, которые в живом Tarkov нельзя продавать на барахолке (noFlea из config/pool_bundled.json, данные tarkov.dev), считаются как перечисленные в remove. Ваш список add всё равно важнее. По умолчанию выкл, потому что меняет то, чем могут торговать игроки. Нужен перезапуск.",
+        useLiveBlacklist: "Вкл: предметы, которые в живом Tarkov нельзя продавать на барахолке (noFlea из config/pool_bundled.json, данные tarkov.dev), считаются как перечисленные в remove. Ваш список add всё равно важнее. По умолчанию выкл, потому что меняет то, чем могут торговать игроки. Нужен перезапуск.",
       },
       pricing: {
         globalMultiplier: "Множитель на все плавающие базовые цены. 1.0 без изменений, 2.0 всё вдвое дороже. Фиксированных цен не касается. Пересобирается при старте сервера.",
@@ -766,8 +881,9 @@ const I18N = {
         minPriceFactor: "Нижняя граница цены в долях базовой: ниже база × это значение она не упадёт. По умолчанию 0.7, минимум 0.01, разумно 0.3-1.",
         maxPriceFactor: "Верхняя граница цены в долях базовой: выше база × это значение она не поднимется. По умолчанию 2.0, не ниже минимума, разумно 1.5-3. Она же режет надбавки раннего вайпа, событий и трендов.",
         wipe: "Надбавка раннего вайпа: сразу после вайпа цены выше и постепенно возвращаются к норме. Возраст вайпа считается от даты регистрации самого старого PMC-профиля.",
-        wipe_enabled: "Включает надбавку раннего вайпа. Больше всего толку с локальными ценами; с tarkovdev лучше выключить, живые средние уже учитывают стадию вайпа.",
+        wipe_enabled: "Включает надбавку раннего вайпа. Больше всего толку с локальными ценами; при живых ценах (Live flea включён) она автоматически пропускается, если не включено «Force with live prices»: живые средние уже учитывают стадию вайпа.",
         wipe_startLengthDays: "Сколько дней длится спад надбавки. По умолчанию 14. При 0 надбавка отключена.",
+        wipe_forceWithLivePrices: "По умолчанию надбавка раннего вайпа игнорируется (×1.0), пока включены живые цены, и при старте пишется предупреждение: живые средние уже учитывают стадию вайпа. Вкл: применять надбавку всё равно, поверх живых цен. По умолчанию выкл.",
         wipe_startMultiplier: "Множитель цены в нулевой день вайпа, линейно спадает до ×1.0 к концу периода. По умолчанию 1.8, минимум 0.01. Всё равно упирается в максимальный фактор цены.",
       },
       events: {
@@ -790,7 +906,8 @@ const I18N = {
       },
       levels: {
         enabled: "Главный выключатель блокировок по уровню: игроки ниже нужного уровня не могут покупать и продавать заблокированные предметы на барахолке. По умолчанию выкл; сам мод тоже должен быть включён. Применяется при сохранении.",
-        useSptDefaults: "Взять за основу встроенные уровни tiered flea из SPT (как в живой игре) и накатить поверх свои предметы и категории. Если выключено, только ваши правила.",
+        baseTable: "Таблица, поверх которой применяются ваши правила. bundled: собственная таблица уровней UltimateFlea (не данные живой игры; в настоящем EFT уровней по предметам нет). spt: встроенный tiered flea из SPT. none: только ваши правила. По умолчанию bundled.",
+        useSptDefaults: "Устарело, используйте baseTable. Читается только если baseTable не задан (вкл = spt, выкл = none). Взять за основу встроенные уровни tiered flea из SPT (как в живой игре) и накатить поверх свои предметы и категории. Если выключено, только ваши правила.",
         lockBuying: "Запретить покупку заблокированных предметов ниже нужного уровня. Заодно интерфейс барахолки показывает такие лоты заблокированными.",
         lockSelling: "Запретить выставлять и продавать заблокированные предметы ниже нужного уровня.",
         items: "ID предмета и уровень игрока, нужный для него. 0 снимает блокировку, пришедшую из дефолтов SPT. Правило по предмету важнее правила по категории.",
@@ -1700,8 +1817,11 @@ function sparkline(w, days, key, color) {
 /** schema path -> allowed string values. */
 const ENUMS = {
   "pool.mode": ["blacklist", "whitelist"],
+  "levels.baseTable": ["bundled", "spt", "none"],
   // Live provider only; `liveFlea: false` is what selects local handbook prices.
   "mod.priceSource": ["tarkovdev", "tarkovmarket"],
+  // live = per-item 24h low/high band, spt = SPT's global 0.8-1.2, exact = every offer at the reference price.
+  "mod.offerSpread": ["live", "spt", "exact"],
 };
 
 /** Keys whose value is a credential: masked in the form, flagged on the JSON tab. */
@@ -2027,6 +2147,118 @@ function renderJsonStatus(check) {
   return `<div class="json-err">${icon("activity", 14)}<span>${escapeHtml(t("toast.invalidJson"))}${escapeHtml(where)}: ${escapeHtml(check.message)}</span></div>`;
 }
 
+/* ---- live pricing advisory ---- */
+
+const ADV_SECTIONS = ["mod", "pricing", "economy", "events", "trends"];
+/** Last fetched copies of the configs the advisory reads; the section being edited overrides its entry with the draft. */
+const advCache = {};
+let advActive = null;
+let advToken = 0;
+
+function advSnapshot() {
+  const snap = {};
+  for (const n of ADV_SECTIONS) {
+    let v = advCache[n];
+    if (cfg && cfg.name === n) {
+      if (cfg.tab === "json") {
+        const check = validateJson(cfg.jsonText);
+        v = check.ok ? check.value : cfg.draft;
+      } else v = cfg.draft;
+    }
+    snap[n] = isPlainObject(v) ? v : {};
+  }
+  return snap;
+}
+
+const advCount = (o) => (isPlainObject(o) ? Object.keys(o).length : 0);
+
+/** Evaluate the advisory checks against a config snapshot. Returns null when live pricing resolves to off. */
+function advisoryItems(s) {
+  const mod = s.mod, pr = s.pricing, ec = s.economy, ev = s.events, tr = s.trends;
+  const source = String(mod.priceSource ?? "local");
+  const live = typeof mod.liveFlea === "boolean" ? mod.liveFlea : source !== "local";
+  if (!live) return null;
+
+  const blocks = [], skews = [], notes = [];
+  const add = (list, name, value, key, vars) => list.push({ name, value: String(value), text: tp(`adv.${key}`, vars) });
+
+  if (source === "local") add(blocks, "mod.priceSource", source, "localSource");
+  if (source === "tarkovmarket" && !String(mod.tarkovMarketApiKey ?? "").trim()) {
+    add(blocks, "mod.tarkovMarketApiKey", t("adv.none"), "noKey");
+  }
+  const fixed = advCount(pr.fixedPrices);
+  if (fixed) add(blocks, "pricing.fixedPrices", tp("adv.items", { n: fixed }), "fixed");
+
+  if (mod.enableEconomy === true) {
+    const lo = fmt(ec.minPriceFactor ?? 0.7, 2), hi = fmt(ec.maxPriceFactor ?? 2, 2);
+    add(skews, "mod.enableEconomy", t("on"), "economy", { min: `x${lo}`, max: `x${hi}` });
+  }
+  const gm = Number(pr.globalMultiplier ?? 1);
+  if (Number.isFinite(gm) && gm !== 1) add(skews, "pricing.globalMultiplier", fmt(gm, 3), "global");
+  const im = advCount(pr.itemMultipliers), cm = advCount(pr.categoryMultipliers);
+  if (im) add(skews, "pricing.itemMultipliers", tp("adv.items", { n: im }), "itemMult");
+  if (cm) add(skews, "pricing.categoryMultipliers", tp("adv.items", { n: cm }), "catMult");
+  if (ev.enabled === true) {
+    const n = advActive ?? (Array.isArray(ev.events) ? ev.events.length : 0);
+    add(skews, "events.enabled", tp("adv.rules", { n }), "events", { n });
+  }
+  if (tr.enabled === true) add(skews, "trends.enabled", t("on"), "trends");
+  const wipe = isPlainObject(ec.wipe) ? ec.wipe : {};
+  if (wipe.enabled === true) {
+    const force = wipe.forceWithLivePrices === true;
+    add(skews, "economy.wipe.forceWithLivePrices", force ? t("on") : t("off"), force ? "wipeForce" : "wipeOff");
+  }
+  const spread = String(mod.offerSpread ?? (mod.exactOfferPrices === true ? "exact" : mod.exactOfferPrices === false ? "spt" : "live"));
+  if (spread === "spt") add(skews, "mod.offerSpread", spread, "offersSpt");
+  else if (spread === "live") add(notes, "mod.offerSpread", spread, "offersLive");
+  else if (spread === "exact") add(notes, "mod.offerSpread", spread, "offersExact");
+  if (mod.preserveBasePrices === false) add(skews, "mod.preserveBasePrices", t("off"), "preserve");
+  if (mod.disableTraderPriceFloor === false) add(skews, "mod.disableTraderPriceFloor", t("off"), "floor");
+
+  const pve = mod.pvePrices === true;
+  add(notes, "mod.pvePrices", pve ? t("on") : t("off"), "pve", { dump: t(pve ? "adv.pveOn" : "adv.pveOff") });
+  add(notes, "mod.liveFlea", t("on"), "restart");
+  add(notes, "mod.liveFlea", t("on"), "missing");
+  return { blocks, skews, notes };
+}
+
+function advisoryHtml() {
+  const r = advisoryItems(advSnapshot());
+  if (!r) return "";
+  const group = (list, key, cls) => list.length ? `<div class="adv-group">
+      <div class="adv-head"><span class="pill ${cls}">${escapeHtml(t(`adv.${key}`))}</span><span class="card-sub">${list.length}</span></div>
+      ${list.map((i) => `<div class="adv-line"><span class="key">${escapeHtml(i.name)}</span><span class="adv-val">${escapeHtml(i.value)}</span><span class="adv-text">${escapeHtml(i.text)}</span></div>`).join("")}
+    </div>` : "";
+  return `<div class="card adv" role="note" aria-label="${escapeHtml(t("adv.title"))}">
+    <div class="adv-title">${icon("activity", 14)}<span>${escapeHtml(t("adv.title"))}</span></div>
+    <p class="note tight">${escapeHtml(t("adv.lead"))}</p>
+    ${group(r.blocks, "blocks", "warn")}${group(r.skews, "skews", "warn")}${group(r.notes, "notes", "")}
+  </div>`;
+}
+
+function syncAdvisory() {
+  const host = root?.querySelector("[data-advisory]");
+  if (host) host.innerHTML = advisoryHtml();
+}
+
+/** Fetch the sibling configs (and active-event count) the advisory needs, then repaint. */
+async function loadAdvisoryData() {
+  const token = ++advToken;
+  const names = ADV_SECTIONS.filter((n) => !(cfg && cfg.name === n));
+  await Promise.all([
+    ...names.map(async (n) => {
+      try { advCache[n] = await getJson(`${API}/config/${n}`); } catch { /* panel degrades to defaults */ }
+    }),
+    (async () => {
+      try {
+        const o = await getJson(`${API}/overview`);
+        advActive = Array.isArray(o?.events?.active) ? o.events.active.length : null;
+      } catch { advActive = null; }
+    })(),
+  ]);
+  if (token === advToken) syncAdvisory();
+}
+
 /* ---- dirty tracking + save bar ---- */
 
 function syncDirty() {
@@ -2036,6 +2268,7 @@ function syncDirty() {
     ? current.trim() !== cfg.baseline.trim()
     : current !== cfg.baseline;
   syncSaveBar();
+  syncAdvisory();
 }
 
 function saveBarHtml() {
@@ -2067,6 +2300,7 @@ function rerenderCfgBody() {
   if (!host) return;
   host.innerHTML = cfg.tab === "json" ? renderJsonTab() : renderForm();
   syncSaveBar();
+  syncAdvisory();
 }
 
 /** Bodies whose delegated listeners are already attached (the body element survives loadSection). */
@@ -2423,7 +2657,7 @@ function renderOverview(data) {
         }))}</p>
         <p class="note tight">${escapeHtml(tp("overview.levelsDetail", {
           items: fmtInt(levels.items ?? 0), categories: fmtInt(levels.categories ?? 0), rules: fmtInt(levels.rules ?? 0),
-        }))}${levels.useSptDefaults ? `. ${escapeHtml(t("overview.sptDefaults"))}` : ""}</p>
+        }))}${levels.baseTable === "spt" ? `. ${escapeHtml(t("overview.sptDefaults"))}` : ""}</p>
       </section>
     </div>
   `;
@@ -2638,6 +2872,124 @@ async function copyStateJson() {
   }
 }
 
+/* ---- reset dialog ------------------------------------------------------- */
+
+let resetBusy = false;
+
+function closeResetDialog() {
+  if (resetBusy) return;
+  const host = root?.querySelector("[data-reset-host]");
+  if (!host) return;
+  const opener = host._opener;
+  host.remove();
+  if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+}
+
+function openResetDialog(opener) {
+  if (!root || root.querySelector("[data-reset-host]")) return;
+  const host = document.createElement("div");
+  host.setAttribute("data-reset-host", "");
+  host._opener = opener;
+  const row = (key, desc) => `<label class="opt reset-opt">
+      <input type="checkbox" data-reset-opt="${key}" checked />
+      <span><strong>${escapeHtml(t(`reset.${key}`))}</strong><span class="note tight">${escapeHtml(t(`reset.${desc}`))}</span></span>
+    </label>`;
+  host.innerHTML = `<div class="overlay" data-backdrop="1">
+    <div class="overlay-panel reset-panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(t("reset.title"))}">
+      <div class="overlay-head">
+        <h2 class="card-title">${escapeHtml(t("reset.title"))}</h2>
+        <button type="button" class="btn icon ghost" data-reset-cancel
+                aria-label="${escapeHtml(t("act.dismiss"))}" title="${escapeHtml(t("act.dismiss"))}">${icon("close", 14)}</button>
+      </div>
+      <div class="overlay-body stack tight">
+        <p class="note tight">${escapeHtml(t("reset.intro"))}</p>
+        ${row("priceCache", "priceCacheDesc")}
+        ${row("economyState", "economyStateDesc")}
+        <div class="warn-box">${icon("lock", 14)}<span>${escapeHtml(t("reset.warn"))}</span></div>
+        <p class="note tight">${escapeHtml(t("reset.hint"))}</p>
+        <p class="note tight" data-reset-status role="status" hidden></p>
+        <div class="preset-actions">
+          <button type="button" class="btn" data-reset-cancel>${escapeHtml(t("reset.cancel"))}</button>
+          <button type="button" class="btn danger" data-reset-confirm>${escapeHtml(t("reset.confirm"))}</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  root.appendChild(host);
+
+  const boxes = [...host.querySelectorAll("[data-reset-opt]")];
+  const confirmBtn = host.querySelector("[data-reset-confirm]");
+  const sync = () => { confirmBtn.disabled = resetBusy || !boxes.some((b) => b.checked); };
+  boxes.forEach((b) => b.addEventListener("change", sync));
+
+  host.addEventListener("click", (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target) return;
+    if (target.closest("[data-reset-cancel]") || target.hasAttribute("data-backdrop")) closeResetDialog();
+    else if (target.closest("[data-reset-confirm]")) void submitReset(host, boxes, confirmBtn);
+  });
+  host.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.stopPropagation(); closeResetDialog(); return; }
+    if (e.key !== "Tab") return;
+    // Keep focus inside the modal dialog.
+    const f = [...host.querySelectorAll("button:not([disabled]), input:not([disabled])")];
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+  sync();
+  boxes[0]?.focus();
+}
+
+async function submitReset(host, boxes, confirmBtn) {
+  if (resetBusy) return;
+  const body = {
+    priceCache: !!boxes.find((b) => b.dataset.resetOpt === "priceCache")?.checked,
+    economyState: !!boxes.find((b) => b.dataset.resetOpt === "economyState")?.checked,
+  };
+  if (!body.priceCache && !body.economyState) {
+    toast(t("reset.none"), "warn");
+    return;
+  }
+
+  resetBusy = true;
+  boxes.forEach((b) => { b.disabled = true; });
+  confirmBtn.disabled = true;
+  const status = host.querySelector("[data-reset-status]");
+  if (status) { status.hidden = false; status.textContent = t("reset.working"); }
+
+  let ok = false;
+  try {
+    const res = await postJson(`${API}/reset`, body);
+    const j = res.json || {};
+    if (!res.ok || j.ok === false) {
+      toast(`${t("reset.failed")}: ${localized(j.error) || `HTTP ${res.status}`}`, "err");
+    } else {
+      ok = true;
+      toast(tp("reset.done", {
+        prices: fmtInt(j.livePrices ?? 0),
+        items: fmtInt(j.repriced ?? 0),
+        files: fmtInt((j.deletedFiles || []).length),
+      }), "ok");
+    }
+  } catch (e) {
+    toast(failText(e, t("reset.failed")), "err");
+  } finally {
+    resetBusy = false;
+  }
+
+  if (ok) {
+    host.remove();
+    // Overview numbers (items, average factor, charts) come from the freshly rebuilt market.
+    if (currentSection().kind === "overview") void loadSection({ silent: true });
+  } else {
+    boxes.forEach((b) => { b.disabled = false; });
+    confirmBtn.disabled = !boxes.some((b) => b.checked);
+    if (status) status.hidden = true;
+  }
+}
+
 /* ---- settings ----------------------------------------------------------- */
 
 function renderSettings() {
@@ -2725,13 +3077,16 @@ function renderPresetPreview(id) {
   if (entry === "loading" || !entry) return `<p class="note tight">${escapeHtml(t("presets.loadingPreview"))}</p>`;
   if (entry.error) return `<div class="err-box">${escapeHtml(entry.error)}</div>`;
 
+  const partial = Array.isArray(entry.partial) ? entry.partial : [];
   const blocks = Object.entries(entry.configs).map(([name, value]) => `
     <div class="preset-cfg">
       <span class="pill">${escapeHtml(configLabel(name))}</span>
+      ${partial.includes(name) ? `<p class="note tight">${escapeHtml(t("presets.partialNote"))}</p>` : ""}
       <div class="code-wrap"><textarea class="code compact" readonly spellcheck="false"
         aria-label="${escapeHtml(configLabel(name))} JSON">${escapeHtml(JSON.stringify(value, null, 2))}</textarea></div>
     </div>`).join("");
-  return `<div class="preset-preview">${blocks || `<p class="note tight">${escapeHtml(t("form.emptyMap"))}</p>`}</div>`;
+  const resetNote = entry.resetsData ? `<p class="note tight">${escapeHtml(t("presets.resetNote"))}</p>` : "";
+  return `<div class="preset-preview">${resetNote}${blocks || `<p class="note tight">${escapeHtml(t("form.emptyMap"))}</p>`}</div>`;
 }
 
 /** Overlay shell, kept generic (.overlay) so other dialogs can reuse it. */
@@ -2831,7 +3186,7 @@ async function openPresetPreview(id) {
     repaintPresets();
     try {
       const data = await getJson(`${API}/presets/${encodeURIComponent(id)}`);
-      presetUi.previews.set(id, { configs: isPlainObject(data?.configs) ? data.configs : {} });
+      presetUi.previews.set(id, { configs: isPlainObject(data?.configs) ? data.configs : {}, partial: data?.partial, resetsData: !!data?.resetsData });
     } catch (e) {
       presetUi.previews.set(id, { error: failText(e, t("presets.previewFailed")) });
     }
@@ -2846,8 +3201,13 @@ async function applyPreset(id) {
   const p = presetUi.list.find((x) => x.id === id);
   if (!p || p.available === false || presetUi.applying) return;
 
-  const configs = (Array.isArray(p.targets) ? p.targets : []).map(configLabel).join(", ");
-  if (!confirm(tp("presets.confirm", { name: localized(p.name) || p.id, configs }))) return;
+  const partial = Array.isArray(p.partial) ? p.partial : [];
+  const targets = Array.isArray(p.targets) ? p.targets : [];
+  const configs = targets.filter((x) => !partial.includes(x)).map(configLabel).join(", ");
+  let msg = tp("presets.confirm", { name: localized(p.name) || p.id, configs });
+  if (partial.length) msg += "\n" + tp("presets.confirmPartial", { configs: partial.map(configLabel).join(", ") });
+  if (p.resetsData === true) msg += "\n" + t("presets.confirmReset");
+  if (!confirm(msg)) return;
 
   presetUi.applying = id;
   repaintPresets();
@@ -3647,6 +4007,7 @@ function actionsHtml(section) {
         <span>${escapeHtml(t("act.autoRefresh"))}</span>
       </label>
       <button type="button" class="btn" data-act="reload-disk">${icon("reload", 15)}${escapeHtml(t("act.reloadDisk"))}</button>
+      <button type="button" class="btn danger" data-act="reset" aria-haspopup="dialog">${escapeHtml(t("reset.open"))}</button>
       <button type="button" class="btn primary" data-act="refresh">${escapeHtml(t("act.refresh"))}</button>
       ${themeBtn}`;
   }
@@ -3735,6 +4096,7 @@ function bindShell() {
     if (act === "refresh") void loadSection();
     else if (act === "theme") setTheme(theme === "dark" ? "light" : "dark");
     else if (act === "reload-disk") void reloadFromDisk();
+    else if (act === "reset") openResetDialog(el);
     else if (act === "copy-state") void copyStateJson();
   });
 
@@ -3905,6 +4267,7 @@ async function loadSection(opts = {}) {
       hasSecret: hasSecretField(data),
     };
 
+    const advHost = !isSelling && (name === "mod" || name === "pricing");
     const tabs = isSelling ? "" : `<div class="tabs" role="tablist" aria-label="${escapeHtml(section.label)}">
       <button type="button" class="tab" role="tab" data-cfg-tab="form" aria-selected="true">${escapeHtml(t("form.tabForm"))}</button>
       <button type="button" class="tab" role="tab" data-cfg-tab="json" aria-selected="false">${escapeHtml(t("form.tabJson"))}</button>
@@ -3917,12 +4280,14 @@ async function loadSection(opts = {}) {
         <span class="grow"></span>
       </div>
       ${isSelling ? `<p class="note tight">${escapeHtml(t("selling.hint"))}</p>` : ""}
+      ${advHost ? `<div data-advisory>${advisoryHtml()}</div>` : ""}
       <div data-cfg-body>${renderForm()}</div>
       <p class="note">${escapeHtml(t("form.saveNote"))}${section.restart ? ` ${escapeHtml(t("form.restartNote"))}` : ""}</p>
       <div class="savebar-slot" data-savebar></div>
     </div>`;
 
     bindCfgSection(body, section);
+    if (advHost) void loadAdvisoryData();
     if (!isSelling && ID_SECTIONS.has(name)) void ensureIdNames();
   } catch (e) {
     if (token !== loadToken) return;

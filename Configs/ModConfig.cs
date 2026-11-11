@@ -22,7 +22,7 @@ public record ModConfig
     /// way to say "no live source".
     /// </summary>
     [JsonPropertyName("priceSource")]
-    public string PriceSource { get; set; } = "local";
+    public string PriceSource { get; set; } = "tarkovdev";
 
     /// <summary>
     /// true = live online prices from the provider in priceSource; false = local handbook prices
@@ -59,9 +59,40 @@ public record ModConfig
     [JsonPropertyName("disableTraderPriceFloor")]
     public bool DisableTraderPriceFloor { get; set; } = false;
 
-    /// <summary>Убирает рандом 0.8-1.2 на офферах. Влияет на весь flea.</summary>
+    /// <summary>
+    /// How individual offers are spread around the reference price: "live" (per-item band from the
+    /// 24h low/high of the live feed, items without it fall back to SPT's range), "spt" (SPT's
+    /// global 0.8-1.2 range) or "exact" (every offer at the reference price). Null (key absent) is
+    /// resolved from the deprecated <see cref="ExactOfferPrices"/> and normalised on load.
+    /// </summary>
+    [JsonPropertyName("offerSpread")]
+    public string? OfferSpread { get; set; } = SpreadLive;
+
+    /// <summary>Deprecated alias of offerSpread: true = "exact", false = "spt". Only read when offerSpread is absent.</summary>
     [JsonPropertyName("exactOfferPrices")]
-    public bool ExactOfferPrices { get; set; } = false;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ExactOfferPrices { get; set; }
+
+    public const string SpreadLive = "live";
+    public const string SpreadSpt = "spt";
+    public const string SpreadExact = "exact";
+
+    /// <summary>Concrete offer spread mode; works on a config that has not been validated yet.</summary>
+    public string ResolveOfferSpread()
+    {
+        var value = OfferSpread?.Trim().ToLowerInvariant();
+        if (value is SpreadLive or SpreadSpt or SpreadExact)
+        {
+            return value;
+        }
+
+        return ExactOfferPrices switch
+        {
+            true => SpreadExact,
+            false => SpreadSpt,
+            _ => SpreadLive
+        };
+    }
 
     /// <summary>Только лоты игроков: без виртуальных (FakePlayer) и без ассорта торговцев на flea.</summary>
     [JsonPropertyName("playerOffersOnly")]

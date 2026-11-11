@@ -25,14 +25,40 @@ public class EconomyEngine(
 
     // Mutated by the tick thread and by trade request threads, enumerated by dashboard
     // (Kestrel) threads: every shared container here must be safe for concurrent use.
-    private readonly ConcurrentDictionary<MongoId, ItemMarketState> _state = new();
+    private volatile ConcurrentDictionary<MongoId, ItemMarketState> _state = new();
+
+    // Serializes Initialize (startup and dashboard reset) against Tick. Reentrant on purpose.
+    private readonly object _gate = new();
 
     // Immutable once published; swapped as a whole by Initialize.
     private volatile ItemCatalog _catalog = ItemCatalog.Empty;
 
-    public void Initialize()
+    /// <param name="refreshPrices">False when the caller has already refreshed the price source.</param>
+    /// <param name="resetState">Backs up and drops the persisted economy state first, so everything reseeds from base prices.</param>
+    /// <returns>Number of items now in the market.</returns>
+    /// <exception cref="InvalidOperationException">The economy state could not be backed up; nothing was changed.</exception>
+    public int Initialize(bool refreshPrices = true, bool resetState = false)
     {
-        priceSource.Refresh();
+        // Network fetch stays outside the gate so a slow download never stalls the tick.
+        if (refreshPrices)
+        {
+            priceSource.Refresh();
+        }
+
+        lock (_gate)
+        {
+            return InitializeLocked(resetState);
+        }
+    }
+
+    private int InitializeLocked(bool resetState)
+    {
+        if (resetState && !stateStore.BackupAndClear(out var resetError))
+        {
+            throw new InvalidOperationException(resetError);
+        }
+
+        wipeStage.WarnIfSuppressed();
 
         var pricing = configManager.Pricing;
         var items = templates.Items;
@@ -43,6 +69,7 @@ public class EconomyEngine(
 
         var persisted = stateStore.Load();
 
+        priceSource.TakeLookupStats();
         var fixedSet = new HashSet<MongoId>();
         var info = new Dictionary<MongoId, ItemInfo>();
         var next = new Dictionary<MongoId, ItemMarketState>();
@@ -87,17 +114,24 @@ public class EconomyEngine(
             next[tpl] = BuildMarketState(tpl, source.Value * mult, persisted, preferCurrent: true);
         }
 
-        _state.Clear();
-        foreach (var (tpl, market) in next)
-        {
-            _state[tpl] = market;
-        }
+        // Swap the whole map: concurrent readers (trades, dashboard) never see it half-filled.
+        _state = new ConcurrentDictionary<MongoId, ItemMarketState>(next);
 
         _catalog = new ItemCatalog(info, fixedSet);
+
+        if (configManager.Mod.ResolveLiveFlea())
+        {
+            var (liveUsed, localUsed) = priceSource.TakeLookupStats();
+            logger.Info(
+                $"[UltimateFlea] Live pricing: source={priceSource.Id}, {priceSource.LivePriceCount} live prices loaded, " +
+                $"{liveUsed} flea items priced live, {localUsed} fell back to local handbook/prices.json" +
+                (priceSource.IsLiveActive ? "." : " (live source unavailable, everything is local)."));
+        }
 
         logger.Success($"[UltimateFlea] Economy initialized for {_state.Count} items ({fixedSet.Count} fixed-price)");
 
         ApplyAll(onlyFloating: false);
+        return _state.Count;
     }
 
     public EconomySnapshot GetSnapshot()
@@ -232,6 +266,24 @@ public class EconomyEngine(
         string.IsNullOrWhiteSpace(name) ? fallback.ToString() : name;
 
     public void Tick()
+    {
+        // An Initialize in progress is about to rebuild everything: skip this tick, never block the update thread.
+        if (!Monitor.TryEnter(_gate))
+        {
+            return;
+        }
+
+        try
+        {
+            TickLocked();
+        }
+        finally
+        {
+            Monitor.Exit(_gate);
+        }
+    }
+
+    private void TickLocked()
     {
         var cfg = configManager.Economy;
         var catalog = _catalog;

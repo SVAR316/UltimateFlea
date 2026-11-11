@@ -16,7 +16,8 @@ public class DashboardController(
     PoolManager poolManager,
     LevelLockService levelLocks,
     PresetService presets,
-    ItemCatalogService itemCatalog) : ControllerBase
+    ItemCatalogService itemCatalog,
+    ResetService resetService) : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -145,7 +146,7 @@ public class DashboardController(
             return BadRequest(new { error });
         }
 
-        return new JsonResult(new PresetDetailResponse(def.Id, configs), JsonOptions);
+        return new JsonResult(new PresetDetailResponse(def.Id, configs, def.Partial, def.ResetsData), JsonOptions);
     }
 
     [HttpPost("presets/{id}/apply")]
@@ -186,6 +187,20 @@ public class DashboardController(
             });
         }
 
+        // Presets that change the price basis also clear the price cache and economy state, otherwise the
+        // persisted CurrentPrice values keep pulling toward the old base. May refetch ~17 MB, so it runs
+        // after the configs are saved and published; a failure is a warning, the configs stay applied.
+        if (def.ResetsData)
+        {
+            var reset = resetService.Run(new ResetRequest(true, true));
+            if (!reset.Ok)
+            {
+                warning = LocalizedText.Join(warning, new LocalizedText(
+                    $"The preset was applied, but the data reset did not complete: {reset.Error?.En}. Use Reset in Settings.",
+                    $"Пресет применён, но сброс данных не завершился: {reset.Error?.Ru}. Используйте сброс в настройках."));
+            }
+        }
+
         return Ok(new { ok = true, applied = result.Applied, restartRecommended = restart, warning });
     }
 
@@ -215,5 +230,23 @@ public class DashboardController(
             ok = true,
             note = "Configs reloaded. Pool and level locks re-applied. Pricing/economy may need a server restart to fully rebuild.",
         });
+    }
+
+    // Clears the live price cache and/or the economy state and re-initializes in place.
+    [HttpPost("reset")]
+    public IActionResult Reset([FromBody] ResetRequest? body)
+    {
+        if (body is null || (!body.PriceCache && !body.EconomyState))
+        {
+            return BadRequest(new
+            {
+                ok = false,
+                error = new LocalizedText("Select at least one of priceCache / economyState.",
+                    "Выберите хотя бы одно: priceCache / economyState."),
+            });
+        }
+
+        var result = resetService.Run(body);
+        return new JsonResult(result, JsonOptions) { StatusCode = result.Ok ? 200 : 500 };
     }
 }

@@ -1,10 +1,11 @@
 using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Spt.Config;
+using UltimateFlea.Configs;
 
 namespace UltimateFlea.Pricing;
 
-// Выключаем handbook regen, пол торговца и разброс 0.8-1.2, иначе наши цены не держатся.
+// Выключаем handbook regen, пол торговца и разброс 0.8-1.2 (только offerSpread=exact), иначе наши цены не держатся.
 [Injectable(InjectionType.Singleton)]
 public class RagfairSettingsPatcher(
     ISptLogger<RagfairSettingsPatcher> logger,
@@ -20,6 +21,8 @@ public class RagfairSettingsPatcher(
         {
             dynamic.GenerateBaseFleaPrices.UseHandbookPrice = false;
             dynamic.GenerateBaseFleaPrices.PreventPriceBeingBelowTraderBuyPrice = false;
+            // Caretaker/BTR/Storyteller have buy_price_coef 0 => trader floor == handbook price for every item.
+            dynamic.UseTraderPriceForOffersIfHigher = false;
             logger.Info("[UltimateFlea] Handbook price regeneration disabled.");
         }
 
@@ -29,7 +32,7 @@ public class RagfairSettingsPatcher(
             logger.Info("[UltimateFlea] Trader price floor disabled.");
         }
 
-        if (mod.ExactOfferPrices)
+        if (mod.ResolveOfferSpread() == ModConfig.SpreadExact)
         {
             dynamic.PriceRanges.Default.Min = 1.0;
             dynamic.PriceRanges.Default.Max = 1.0;

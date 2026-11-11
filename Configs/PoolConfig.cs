@@ -19,4 +19,15 @@ public record PoolConfig
 
     [JsonPropertyName("removeCategories")]
     public List<string> RemoveCategories { get; set; } = new();
+
+    /// <summary>true = a category rule covers the whole subtree (parent or any ancestor); false = direct parent only.</summary>
+    [JsonPropertyName("nestedCategories")]
+    public bool NestedCategories { get; set; } = true;
+
+    /// <summary>
+    /// true = tpls in config/pool_bundled.json (live tarkov.dev noFlea items) are treated as if listed in
+    /// <c>remove</c>. Explicit <c>add</c> entries still win. Default false: it changes what players can trade.
+    /// </summary>
+    [JsonPropertyName("useLiveBlacklist")]
+    public bool UseLiveBlacklist { get; set; } = false;
 }

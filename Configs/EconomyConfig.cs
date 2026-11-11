@@ -50,4 +50,11 @@ public record WipeConfig
     /// <summary>Day-zero multiplier, falls to 1.0 by end of phase.</summary>
     [JsonPropertyName("startMultiplier")]
     public double StartMultiplier { get; set; } = 1.8;
+
+    /// <summary>
+    /// By default the wipe bump is ignored (multiplier 1.0) while live prices are active, because live
+    /// averages already include the wipe stage. true = apply it anyway (stacks on live prices).
+    /// </summary>
+    [JsonPropertyName("forceWithLivePrices")]
+    public bool ForceWithLivePrices { get; set; } = false;
 }

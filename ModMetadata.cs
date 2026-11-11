@@ -9,7 +9,7 @@ public record ModMetadata : IModMetadata, IModBlazorMetadata
     public static string AssemblyVersion { get; } =
         typeof(ModMetadata).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-        ?? "1.3.0";
+        ?? "1.3.2";
 
     public string ModGuid { get; init; } = "com.zloymolodoy.ultimateflea";
     public string Name { get; init; } = "UltimateFlea";

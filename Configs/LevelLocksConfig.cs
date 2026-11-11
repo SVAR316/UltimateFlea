@@ -5,11 +5,19 @@ namespace UltimateFlea.Configs;
 public record LevelLocksConfig
 {
     [JsonPropertyName("enabled")]
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; } = true;
 
-    /// <summary>Start from SPT's live-like tieredFlea levels, then apply items/categories on top.</summary>
+    /// <summary>
+    /// Base table the user's items/categories are merged on top of: "bundled" (default, config/levels_bundled.json),
+    /// "spt" (ragfair tieredFlea) or "none". Null in a file means "absent": resolved in ConfigManager.ValidateLevels.
+    /// </summary>
+    [JsonPropertyName("baseTable")]
+    public string? BaseTable { get; set; } = "bundled";
+
+    /// <summary>Deprecated alias of baseTable (true = "spt", false = "none"); only read when baseTable is absent.</summary>
     [JsonPropertyName("useSptDefaults")]
-    public bool UseSptDefaults { get; set; } = true;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? UseSptDefaults { get; set; }
 
     [JsonPropertyName("lockBuying")]
     public bool LockBuying { get; set; } = true;

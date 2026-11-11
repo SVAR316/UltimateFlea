@@ -5,7 +5,7 @@ using UltimateFlea.Client.Patches;
 
 namespace UltimateFlea.Client
 {
-    [BepInPlugin("com.zloymolodoy.ultimateflea.client", "UltimateFlea Client", "1.3.0")]
+    [BepInPlugin("com.zloymolodoy.ultimateflea", "UltimateFlea Client", "1.3.2")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;

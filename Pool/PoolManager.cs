@@ -1,6 +1,7 @@
 using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
+using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Tables;
 
@@ -24,8 +25,24 @@ public class PoolManager(
 
         var addTpls = ToMongoIdSet(poolConfig.Add);
         var removeTpls = ToMongoIdSet(poolConfig.Remove);
+        var userRemoveTpls = removeTpls.ToHashSet();
         var addCats = ToMongoIdSet(poolConfig.AddCategories);
         var removeCats = ToMongoIdSet(poolConfig.RemoveCategories);
+
+        var liveApplied = 0;
+        if (poolConfig.UseLiveBlacklist)
+        {
+            foreach (var tpl in LoadLiveBlacklist())
+            {
+                // Exact-TPL add keeps precedence (Decide checks add first).
+                if (removeTpls.Add(tpl) && !addTpls.Contains(tpl))
+                {
+                    liveApplied++;
+                }
+            }
+
+            logger.Info($"[UltimateFlea] Pool: live blacklist (noFlea) applied, {liveApplied} entries added to remove (explicit 'add' entries still win).");
+        }
 
         var whitelistMode = string.Equals(poolConfig.Mode, "whitelist", StringComparison.OrdinalIgnoreCase);
 
@@ -35,6 +52,11 @@ public class PoolManager(
                 "[UltimateFlea] Pool: whitelist mode with an empty addCategories removes every item from the flea " +
                 "except the explicit 'add' list. Fill addCategories or set mode to 'blacklist'.");
         }
+
+        // Per-Apply cache: resolved (add, remove) category match for each distinct item parent.
+        var nested = poolConfig.NestedCategories;
+        var catCache = new Dictionary<MongoId, (bool Add, bool Remove)>();
+        var anyCats = addCats.Count > 0 || removeCats.Count > 0;
 
         var enabled = 0;
         var disabled = 0;
@@ -52,7 +74,21 @@ public class PoolManager(
                 continue;
             }
 
-            bool? decision = Decide(tpl, item.Parent, whitelistMode, addTpls, removeTpls, addCats, removeCats);
+            var catAdd = false;
+            var catRemove = false;
+            if (anyCats)
+            {
+                var parent = item.Parent;
+                if (!catCache.TryGetValue(parent, out var match))
+                {
+                    match = ResolveCategories(parent, nested, items, addCats, removeCats);
+                    catCache[parent] = match;
+                }
+
+                (catAdd, catRemove) = match;
+            }
+
+            bool? decision = Decide(tpl, whitelistMode, addTpls, removeTpls, catAdd, catRemove);
             if (decision is null)
             {
                 continue;
@@ -81,7 +117,7 @@ public class PoolManager(
 
         var clearedItemBlacklist = itemBlacklistCleaner.Unblacklist(toUnblacklist);
 
-        var missing = addTpls.Concat(removeTpls)
+        var missing = addTpls.Concat(userRemoveTpls)
             .Where(tpl => !items.ContainsKey(tpl))
             .Select(tpl => tpl.ToString())
             .Distinct()
@@ -96,7 +132,7 @@ public class PoolManager(
         var knownParents = items.Values.Select(item => item.Parent).ToHashSet();
 
         var missingCats = addCats.Concat(removeCats)
-            .Where(id => !knownParents.Contains(id))
+            .Where(id => !knownParents.Contains(id) && !(poolConfig.NestedCategories && items.ContainsKey(id)))
             .Select(id => id.ToString())
             .Distinct()
             .ToList();
@@ -112,21 +148,44 @@ public class PoolManager(
             (clearedItemBlacklist > 0 ? $", cleared {clearedItemBlacklist} from item blacklist" : string.Empty));
     }
 
-    // true = в пул, false = убрать, null = не трогать. Конкретный TPL бьёт категорию.
-    private static bool? Decide(
-        MongoId tpl,
+    // Does the parent itself, or (nested mode) any ancestor up the _parent chain, match a category rule.
+    // Depth capped at 32 like LevelLockService.BuildCategoryLevels; results are cached per parent by the caller.
+    private static (bool Add, bool Remove) ResolveCategories(
         MongoId parent,
-        bool whitelistMode,
-        HashSet<MongoId> addTpls,
-        HashSet<MongoId> removeTpls,
+        bool nested,
+        IReadOnlyDictionary<MongoId, TemplateItem> items,
         HashSet<MongoId> addCats,
         HashSet<MongoId> removeCats)
     {
+        var add = false;
+        var remove = false;
+        var current = parent;
+        for (var depth = 0; depth < 32 && !current.IsEmpty; depth++)
+        {
+            add |= addCats.Contains(current);
+            remove |= removeCats.Contains(current);
+            if (!nested || (add && remove) || !items.TryGetValue(current, out var node))
+            {
+                break;
+            }
+
+            current = node.Parent;
+        }
+
+        return (add, remove);
+    }
+
+    // true = в пул, false = убрать, null = не трогать. Конкретный TPL бьёт категорию.
+    private static bool? Decide(
+        MongoId tpl,
+        bool whitelistMode,
+        HashSet<MongoId> addTpls,
+        HashSet<MongoId> removeTpls,
+        bool catAdd,
+        bool catRemove)
+    {
         if (addTpls.Contains(tpl)) return true;
         if (removeTpls.Contains(tpl)) return false;
-
-        var catAdd = addCats.Contains(parent);
-        var catRemove = removeCats.Contains(parent);
 
         if (whitelistMode)
         {
@@ -136,6 +195,40 @@ public class PoolManager(
         if (catRemove) return false;
         if (catAdd) return true;
         return null;
+    }
+
+    private List<MongoId> LoadLiveBlacklist()
+    {
+        var result = new List<MongoId>();
+        try
+        {
+            var path = System.IO.Path.Combine(configManager.ModPath, "config", "pool_bundled.json");
+            if (!File.Exists(path))
+            {
+                logger.Warning($"[UltimateFlea] Pool: useLiveBlacklist is on but {path} was not found.");
+                return result;
+            }
+
+            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            if (doc.RootElement.TryGetProperty("noFlea", out var arr) &&
+                arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var el in arr.EnumerateArray())
+                {
+                    var s = el.GetString();
+                    if (!string.IsNullOrWhiteSpace(s) && MongoId.IsValidMongoId(s))
+                    {
+                        result.Add(new MongoId(s));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.Warning($"[UltimateFlea] Pool: live blacklist file is malformed ({ex.Message}).");
+        }
+
+        return result;
     }
 
     private HashSet<MongoId> ToMongoIdSet(IEnumerable<string> raw)

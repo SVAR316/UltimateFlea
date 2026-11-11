@@ -1,3 +1,6 @@
+using System.Text.Json;
+using UltimateFlea.Util;
+using System.Text.Json.Serialization;
 using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Helpers.Items;
@@ -73,11 +76,11 @@ public class LevelLockService(
         var cfg = configManager.Levels;
         var tiered = ragfairConfig.TieredFlea;
 
-        var items = cfg.UseSptDefaults ? new Dictionary<MongoId, int>(tiered.UnlocksTpl) : new Dictionary<MongoId, int>();
-        var types = cfg.UseSptDefaults ? new Dictionary<MongoId, int>(tiered.UnlocksType) : new Dictionary<MongoId, int>();
-        var ammo = cfg.UseSptDefaults && tiered.AmmoTiersEnabled && tiered.AmmoTplUnlocks is not null
-            ? new Dictionary<MongoId, int>(tiered.AmmoTplUnlocks)
-            : new Dictionary<MongoId, int>();
+        var items = new Dictionary<MongoId, int>();
+        var types = new Dictionary<MongoId, int>();
+        var ammo = new Dictionary<MongoId, int>();
+
+        SeedBaseTable(cfg.BaseTable, items, types, ammo, ragfairConfig);
 
         Merge(items, cfg.Items, "items");
         Merge(types, cfg.Categories, "categories");
@@ -268,6 +271,96 @@ public class LevelLockService(
         }
 
         return resolution;
+    }
+
+    // Seeds the chosen base table: bundled -> spt -> none. A missing/malformed bundled file only warns.
+    private void SeedBaseTable(
+        string? baseTable,
+        Dictionary<MongoId, int> items,
+        Dictionary<MongoId, int> types,
+        Dictionary<MongoId, int> ammo,
+        RagfairConfig ragfair)
+    {
+        var table = string.IsNullOrEmpty(baseTable) ? "bundled" : baseTable;
+
+        if (table == "bundled")
+        {
+            if (TryLoadBundled(items, types))
+            {
+                return;
+            }
+
+            logger.Warning("[UltimateFlea] Level locks: bundled table unavailable, falling back to 'spt'.");
+            table = "spt";
+        }
+
+        var tiered = ragfair.TieredFlea;
+
+        if (table == "spt")
+        {
+            try
+            {
+                foreach (var (k, v) in tiered.UnlocksTpl) items[k] = v;
+                foreach (var (k, v) in tiered.UnlocksType) types[k] = v;
+                if (tiered.AmmoTiersEnabled && tiered.AmmoTplUnlocks is not null)
+                {
+                    foreach (var (k, v) in tiered.AmmoTplUnlocks) ammo[k] = v;
+                }
+
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.Warning($"[UltimateFlea] Level locks: SPT tieredFlea table unusable ({ex.Message}), falling back to 'none'.");
+                items.Clear();
+                types.Clear();
+                ammo.Clear();
+            }
+        }
+        // "none": leave everything empty.
+    }
+
+    private bool TryLoadBundled(Dictionary<MongoId, int> items, Dictionary<MongoId, int> types)
+    {
+        try
+        {
+            var path = Path.Combine(configManager.ModPath, "config", "levels_bundled.json");
+            if (!File.Exists(path))
+            {
+                logger.Warning($"[UltimateFlea] Level locks: bundled table not found at {path}");
+                return false;
+            }
+
+            var table = JsonSerializer.Deserialize<BundledTable>(File.ReadAllText(path), JsonFileStore.Config);
+            if (table is null)
+            {
+                logger.Warning("[UltimateFlea] Level locks: bundled table is empty.");
+                return false;
+            }
+
+            var tmpItems = new Dictionary<MongoId, int>();
+            var tmpTypes = new Dictionary<MongoId, int>();
+            Merge(tmpItems, table.Items ?? new(), "bundled items");
+            Merge(tmpTypes, table.Categories ?? new(), "bundled categories");
+
+            foreach (var (k, v) in tmpItems) items[k] = v;
+            foreach (var (k, v) in tmpTypes) types[k] = v;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.Warning($"[UltimateFlea] Level locks: bundled table is malformed ({ex.Message}).");
+            return false;
+        }
+    }
+
+    private sealed class BundledTable
+    {
+        [JsonPropertyName("items")]
+        public Dictionary<string, int>? Items { get; set; }
+
+        [JsonPropertyName("categories")]
+        public Dictionary<string, int>? Categories { get; set; }
     }
 
     private void Merge(Dictionary<MongoId, int> target, Dictionary<string, int> overrides, string section)

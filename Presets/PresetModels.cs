@@ -25,6 +25,15 @@ public sealed record PresetDefinition(
 {
     /// <summary>Config names written by the preset. Dynamic presets declare theirs explicitly.</summary>
     public string[] Targets { get; init; } = Configs?.Keys.ToArray() ?? [];
+
+    /// <summary>
+    /// Targets whose body lists only the keys the preset sets; every other key keeps its current value.
+    /// Targets not listed here are replaced as a whole.
+    /// </summary>
+    public string[] Partial { get; init; } = [];
+
+    /// <summary>true = applying also clears the price cache and economy state (see ResetService).</summary>
+    public bool ResetsData { get; init; }
 }
 
 public enum PresetKind
@@ -45,11 +54,13 @@ public sealed record PresetSummary(
     string[] Tags,
     string[] Requires,
     bool Available,
-    LocalizedText? UnavailableReason);
+    LocalizedText? UnavailableReason,
+    string[] Partial,
+    bool ResetsData);
 
 public sealed record PresetListResponse(IReadOnlyList<PresetSummary> Presets);
 
-public sealed record PresetDetailResponse(string Id, IReadOnlyDictionary<string, JsonElement> Configs);
+public sealed record PresetDetailResponse(string Id, IReadOnlyDictionary<string, JsonElement> Configs, string[] Partial, bool ResetsData);
 
 /// <summary>Outcome of applying a preset. <see cref="Error"/> set means the apply was refused or incomplete.</summary>
 public sealed record PresetApplyResult(

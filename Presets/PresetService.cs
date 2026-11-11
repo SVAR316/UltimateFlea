@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Common;
@@ -36,7 +37,7 @@ public class PresetService(
             }
 
             return new PresetSummary(def.Id, def.Name, def.Description, def.Targets, def.Tags, def.Requires,
-                reason is null, reason);
+                reason is null, reason, def.Partial, def.ResetsData);
         }).ToList();
     }
 
@@ -113,8 +114,9 @@ public class PresetService(
             var applied = new List<string>();
             var restart = false;
 
-            foreach (var (name, body) in configs)
+            foreach (var (name, rawBody) in configs)
             {
+                var body = def.Partial.Contains(name, StringComparer.Ordinal) ? MergeOver(name, rawBody) : rawBody;
                 if (!configManager.TrySaveConfig(name, body, out var error, out var restartRecommended))
                 {
                     logger.Error($"[UltimateFlea] Preset '{def.Id}' stopped at '{name}': {error}");
@@ -137,6 +139,18 @@ public class PresetService(
             logger.Success($"[UltimateFlea] Applied preset '{def.Id}' ({string.Join(", ", applied)})");
             return new(applied, restart, LocalizedText.Join(summary, UnknownIdWarning(configs)), null, 200);
         }
+    }
+
+    /// <summary>The current config as JSON with the preset's keys laid over it (shallow, per top-level key).</summary>
+    private JsonElement MergeOver(string name, JsonElement partial)
+    {
+        var merged = JsonSerializer.SerializeToNode(configManager.GetConfigObject(name), JsonFileStore.Config) as JsonObject ?? new JsonObject();
+        foreach (var prop in partial.EnumerateObject())
+        {
+            merged[prop.Name] = JsonNode.Parse(prop.Value.GetRawText());
+        }
+
+        return JsonSerializer.SerializeToElement(merged, JsonFileStore.Config);
     }
 
     /// <summary>

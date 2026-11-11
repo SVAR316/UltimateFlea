@@ -29,6 +29,12 @@ Edit `mod` / `pool` / `pricing` / `economy` / `events` / `trends` / `levels`, to
 
 Config files are stored in `config\` next to the DLL. Economy state is saved to `data\economy_state.json`.
 
+## Building a release
+
+From the repo root: `powershell -File tools/package.ps1` (optional `-TarkovDir "D:\SPT"`, default `C:\SPT`, needed for the client build).
+
+It builds the server mod and the client plugin in Release and writes `dist/UltimateFlea-<version>.zip` (version read from `UltimateFlea.csproj`). If the client build fails the script warns and produces a server-only zip. Extract the zip into the SPT game folder root: the mod lands in `SPT_Runtime/user/mods/UltimateFlea/`, the client in `BepInEx/plugins/UltimateFlea/`. The zip contains the bundled data (`config/levels_bundled.json`, `config/pool_bundled.json`) but not the user-editable `config/*.json`, so updating never overwrites settings; missing configs fall back to built-in defaults identical to the shipped files. No `.pdb` files are included.
+
 ## Item IDs
 
 Find item TPLs (24-char IDs) from:
@@ -56,7 +62,8 @@ Invalid IDs are skipped and logged as warnings.
 | `pvePrices` | Uses PvE Tarkov.dev prices instead of regular prices |
 | `preserveBasePrices` | Stops SPT from rebuilding prices from the handbook |
 | `disableTraderPriceFloor` | Allows flea prices below trader purchase prices |
-| `exactOfferPrices` | Removes the default 0.8-1.2 offer price spread. This affects the entire flea market |
+| `offerSpread` | How individual offers vary around the reference price: `live` (default) = per-item band from the 24h low/high of the live feed, `spt` = SPT's global random 0.8-1.2 range for every item, `exact` = every offer at exactly the reference price. Only `exact` touches SPT's `PriceRanges`. See "Offer spread" below |
+| `exactOfferPrices` | **Deprecated**, replaced by `offerSpread`. Only read when `offerSpread` is absent: `true` = `exact`, `false` = `spt`. It is dropped from `mod.json` the next time the config is saved |
 | `playerOffersOnly` | Only real player listings. Disables virtual (FakePlayer) offers and trader assort listings on the flea |
 | `quickListFromStash` | Client: stash context menu **UltimateFlea: List** lists immediately and shows price + tax toast. Disable to hide the menu item |
 | `debug` | Enables additional logging |
@@ -71,16 +78,18 @@ With `quickListFromStash: true` (also in BepInEx ConfigurationManager → Ultima
 | --- | --- |
 | `mode` | `blacklist` or `whitelist` |
 | `add` / `remove` | Specific item TPLs |
-| `addCategories` / `removeCategories` | Parent or base-class IDs |
+| `addCategories` / `removeCategories` | Parent or base-class IDs. Nested by default: a category covers its whole subtree |
+| `nestedCategories` | `true` (default): a category rule matches the item's parent or any ancestor category. `false`: direct parent only (old behaviour) |
+| `useLiveBlacklist` | Default `false` (opt-in, it changes what players can trade). `true`: every item with `noFlea` in the live tarkov.dev data (`config/pool_bundled.json`, 1532 items) is treated as if listed in `remove`. Your exact-TPL `add` entries still win. The server log says how many entries were applied |
 
 #### Blacklist mode
 
 Blacklist mode keeps the original SPT flea market pool and only changes items covered by your rules:
 
 - `remove` blocks a specific item.
-- `removeCategories` blocks every item whose direct parent matches the category ID.
+- `removeCategories` blocks every item in that category, subcategories included (with `nestedCategories: false`, only direct children).
 - `add` enables a specific item, even if its category is blocked.
-- `addCategories` enables every item whose direct parent matches the category ID.
+- `addCategories` enables every item in that category, subcategories included.
 - Items that match no rule are left unchanged.
 
 Example:
@@ -118,7 +127,7 @@ Example:
 }
 ```
 
-Item rules are checked before category rules. If the same item appears in both `add` and `remove`, `add` currently wins. Category matching uses the item's direct parent ID and does not automatically include nested child categories.
+Item rules are checked before category rules. If the same item appears in both `add` and `remove`, `add` currently wins. Category matching is nested by default (the item's parent or any ancestor category matches); set `nestedCategories` to `false` for direct-parent-only matching.
 
 If another mod such as WTT puts an item in the global item blacklist, adding it here also removes it from that blacklist and its runtime cache.
 
@@ -164,7 +173,8 @@ On every tick, supply and demand decay, a target price is calculated, and the cu
 | `noise` | Random variation around the target. `0` disables it; `0.03` adds light variation |
 | `minPriceFactor` | Minimum price relative to the base price. `0.5` means half the base price |
 | `maxPriceFactor` | Maximum price relative to the base price |
-| `wipe.enabled` | Early-wipe price multiplier. Default on with `local`. Turn off if using `tarkovdev` (live averages already include wipe stage) |
+| `wipe.enabled` | Early-wipe price multiplier. Default on. Skipped automatically (treated as `1.0`, with a startup warning, `economy.json` is not rewritten) while live prices are active (`liveFlea: true`), because live averages already include the wipe stage |
+| `wipe.forceWithLivePrices` | Default `false`. `true` applies the wipe multiplier on top of live prices anyway (stacking) |
 | `wipe.startLengthDays` | Number of days the early-wipe phase lasts |
 | `wipe.startMultiplier` | Multiplier on day zero. It decreases linearly to `1.0` by the end of the phase |
 
@@ -245,10 +255,11 @@ Level-locked flea trading, like live Tarkov. Off by default.
 | Field | Description |
 | --- | --- |
 | `enabled` | Turns level locks on or off |
-| `useSptDefaults` | Starts from SPT's live-like levels (`tieredFlea` in SPT's `ragfair.json`), then applies your `items` / `categories` on top |
+| `baseTable` | Table your rules are applied on top of: `bundled` (default, curated UltimateFlea table in `config/levels_bundled.json`, now generated from live tarkov.dev `minLevelForFlea`; see "Bundled live data"), `spt` (SPT's `tieredFlea` from `ragfair.json`) or `none`. A missing or broken bundled file falls back to `spt`, then `none` |
+| `useSptDefaults` | Deprecated alias, used only when `baseTable` is absent: `true` = `spt`, `false` = `none` |
 | `lockBuying` | Players below the level can't buy these items from other players. Offers show as locked on the flea |
 | `lockSelling` | Players below the level can't list these items |
-| `items` | Item TPL -> required level. `0` removes a default lock |
+| `items` | Item TPL -> required level. `0` removes a lock from the base table |
 | `categories` | Category / base class ID -> required level. Nested categories are included. `0` removes a default lock |
 
 Priority is the same as SPT: ammo tier, then exact item, then the highest matching category. Trader offers are never locked.
@@ -258,7 +269,7 @@ Example: armor from level 30, graphics card from level 20, no lock on the defaul
 ```json
 {
   "enabled": true,
-  "useSptDefaults": true,
+  "baseTable": "bundled",
   "lockBuying": true,
   "lockSelling": true,
   "items": {
@@ -295,7 +306,13 @@ Set `liveFlea` to `true` to use live prices. `priceSource` picks the provider:
 - `tarkovdev` - `avg24hPrice` (fallback: `lastLowPrice`) from the static dump at [json.tarkov.dev](https://json.tarkov.dev/endpoints). `pvePrices` switches it to the PvE dump.
 - `tarkovmarket` - **experimental, off by default.** Needs `tarkovMarketApiKey`; reads `api.tarkov-market.app/api/v1/items/all`. The response schema and auth header (`x-api-key`) could not be verified without a key, and PvE support there is unconfirmed. A response with fewer than 300 usable prices is rejected. With an empty key the mod uses `tarkovdev` instead.
 
-Fallback chain: live download -> disk cache (`data/`) -> local handbook prices. Items missing from the live feed also use local prices. With `liveFlea: false` the active source is always local and no request is made, whatever `priceSource` says.
+### Offer spread
+
+`offerSpread: "live"` (the default) gives each item its own offer band instead of SPT's one global 0.8-1.2. The tarkov.dev dump carries `low24hPrice` and `high24hPrice` next to `avg24hPrice`; the mod stores them as **ratios of the chosen reference price** (`low / ref`, `high / ref`, each clamped to 0.5-3.0), so they stay valid while the economy simulation moves the price. Entries where low or high is missing, zero or inverted get no band. When an offer is generated, SPT's price randomisation (`RagfairPriceService.RandomiseOfferPrice`) is replaced for that item by a draw from a triangular distribution over its band, peaking at the reference price (offers cluster near the live number and reach the 24h extremes only rarely). Example: red keycard (avg 886509, low 837111, high 1000000) gets 0.944x-1.128x; blue keycard (avg 459456, low 450000, high 855555) gets 0.979x-1.862x.
+
+Items without band data (not in the feed, local-price fallback, `liveFlea: false`, tarkovmarket source) use SPT's normal 0.8-1.2 range, and weapon presets and pack offers always keep SPT's ranges. The bands are cached in `data/tarkovdev_prices-<mode>.json.spread`; a cache from an older version has no such file, so the next start downloads the dump in full once instead of answering 304. If the patch cannot be bound the mod logs a warning and SPT's own range applies.
+
+Fallback chain: live download -> disk cache (`data/`) -> local handbook prices. Items missing from the live feed also use local prices (SPT's `prices.json` and the handbook); at startup one INFO line shows the price source, how many live prices were loaded and how many flea items fell back to local. The shipped `mod.json` has `liveFlea: true`; if the key is omitted, it is resolved from `priceSource` as before. With `liveFlea: false` the active source is always local and no request is made, whatever `priceSource` says.
 
 Troubleshooting:
 
@@ -304,9 +321,16 @@ Troubleshooting:
 - `api.tarkov.dev/graphql` being down does **not** affect this mod; it only reads the static `json.tarkov.dev` dump.
 - To work fully offline, set `liveFlea` to `false`.
 
-## Planned
+### Bundled live data and the generator
 
-- Client UI for level locks (lock icon and level on categories, blocked sell window)
+`config/levels_bundled.json` (per-item `minLevelForFlea`, items with a level above 0) and `config/pool_bundled.json` (`noFlea` items, used by `pool.useLiveBlacklist`) are generated from the tarkov.dev item dump `https://json.tarkov.dev/regular/items`. To refresh them (Python 3, stdlib only):
+
+```
+python tools/generate_bundles.py                    # downloads the dump
+python tools/generate_bundles.py --input items.json # uses an already-downloaded dump
+```
+
+It rewrites both files in `config/` and prints counts per level and the `noFlea` count.
 
 ## Presets
 
